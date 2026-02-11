@@ -3,7 +3,7 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 function Home() {
   return (
     <div>
-      <h1 className="text-indigo-500 bg-amber-400">React Router DOM Setup</h1>
+      <h1>React Router DOM Setup</h1>
     </div>
   );
 }
