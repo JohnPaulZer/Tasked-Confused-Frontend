@@ -7,19 +7,13 @@ import { FcGoogle } from "react-icons/fc";
 import { ImFacebook2 } from "react-icons/im";
 import { FaSquareGithub } from "react-icons/fa6";
 import CheckBox from "@/components/CheckBox";
+import { useNavigate } from "react-router-dom";
 
 function Home() {
+  const navigate = useNavigate();
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden">
-      {/* Top Section (Brown background) */}
-      <div className="relative z-10 pt-10 flex flex-col items-center">
-        <img src={Logo} alt="Logo" className="w-auto h-64 object-contain" />
-      </div>
-
-      {/* The Curve Section */}
-      <div className="relative flex-grow flex flex-col">
-        {/* Your Custom SVG as a Background */}
-        <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pt-64">
           <svg
             viewBox="0 0 412 690"
             fill="none"
@@ -33,6 +27,15 @@ function Home() {
             />
           </svg>
         </div>
+      {/* Top Section (Brown background) */}
+      <div className="relative z-10 pt-10 flex flex-col items-center">
+        <img src={Logo} alt="Logo" className="w-auto h-64 object-contain" />
+      </div>
+
+      {/* The Curve Section */}
+      <div className="relative flex-grow flex flex-col">
+        {/* Your Custom SVG as a Background */}
+        
 
         {/* Content Container (Layered on top of SVG) */}
         <div className="relative z-10 flex flex-col items-center justify-center mx-6 pb-12 mt-4">
@@ -68,7 +71,7 @@ function Home() {
           </div>
 
           <div className="w-full max-w-sm">
-            <PrimaryButton content="Log In" />
+            <PrimaryButton content="Log In" onClick={() => navigate("/MainPage")}/>
           </div>
 
           <p className="text-primary text-sm opacity-70 my-6">Or sign in with</p>

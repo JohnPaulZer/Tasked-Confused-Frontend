@@ -1,8 +1,8 @@
+import InputField from "@/components/InputField";
+import PrimaryButton from "@/components/PrimaryButton";
 import { FaLock } from "react-icons/fa";
 import { IoMdArrowRoundBack } from "react-icons/io";
 import { MdEmail } from "react-icons/md";
-import InputField from "@/components/InputField";
-import PrimaryButton from "@/components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
 // import CheckBox from "@/components/CheckBox";
 

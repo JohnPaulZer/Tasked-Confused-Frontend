@@ -1,18 +1,12 @@
-import Logo from "../images/Logo.png";
 import PrimaryButton from "@/components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
+import Logo from "../images/Logo.png";
 
 function LandPage() {
   const navigate = useNavigate();
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden">
-      <div>
-        <h1 className="text-5xl text-secondary font-serif text-center h-64 flex items-center justify-center">
-            Welcome!
-          </h1>
-      </div>
-      <div className="relative flex-grow flex flex-col">
-        <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pt-64">
           <svg
             viewBox="0 0 412 690"
             fill="none"
@@ -25,15 +19,24 @@ function LandPage() {
               fill="#CDB885"
             />
           </svg>
-        </div>   
+        </div>
+      <div>
+        <h1 className="text-5xl text-secondary font-serif text-center h-64 flex items-center justify-center">
+          Welcome!
+        </h1>
+      </div>
+      <div className="relative flex-grow flex flex-col">
+        
         <div className="relative z-10 w-full flex items-center justify-center">
           <img src={Logo} alt="Logo" className="mt-20" />
-        </div>      
+        </div>
         <div className="relative z-10 w-full max-w-sm w-full mx-auto">
-            <PrimaryButton content="Get Started" onClick={() => navigate("/LandPage")}/>
+          <PrimaryButton
+            content="Get Started"
+            onClick={() => navigate("/LandPage")}
+          />
         </div>
       </div>
-      
     </div>
   );
 }
