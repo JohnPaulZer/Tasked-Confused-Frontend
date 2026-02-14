@@ -4,4 +4,8 @@
   --color-primary: #6e5034;
   --color-secondary: #efe1b5;
   --color-third: #cdb885;
+  /* This sets "font-sans" (the default font) to Inter */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* This sets "font-serif" to Bree Serif */
+  --font-serif: "Bree Serif", ui-serif, Georgia, serif;
 }
