@@ -8,6 +8,7 @@ interface PrimaryButtonContent {
   onClick?: () => void; // Optional onClick handler
   widthClass?: string; // allow overriding width (e.g. "w-20")
   className?: string; // additional custom classes
+  type?: "submit" | "reset" | "button"
 }
 
 const PrimaryButton: React.FC<PrimaryButtonContent> = ({
@@ -18,12 +19,14 @@ const PrimaryButton: React.FC<PrimaryButtonContent> = ({
   hoverColorClass,
   onClick,
   widthClass,
-  className
+  className,
+  type
 }) => {
   return (
     <>
       <button
       onClick={onClick}
+      type={type}
         className={`
           ${widthClass || "w-full"} 
           ${bgColorClass || "bg-primary"} 

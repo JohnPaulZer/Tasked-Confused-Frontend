@@ -5,12 +5,15 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
   type?: "text" | "email" | "password" | "number";
+  error?: boolean; // Added error prop
 }
 
 const InputField: React.FC<InputFieldProps> = ({
   icon,
   type = "text",
   placeholder,
+  error = false, // Default to false
+  className,
   ...rest
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +31,10 @@ const InputField: React.FC<InputFieldProps> = ({
       <input
         type={inputType}
         placeholder={placeholder}
-        className={`w-full bg-secondary rounded-[5px] text-primary text-[20px] w-full h-10 pl-12 pr-20 outline-none font-serif`}
+        // Logic: Apply red border directly here if error is true
+        className={`w-full bg-secondary rounded-[5px] text-primary text-[20px] h-10 pl-12 pr-20 outline-none font-serif 
+          ${error ? "border-2 border-red-500" : ""} 
+          ${className || ""}`}
         {...rest}
       />
       {isPassword && (

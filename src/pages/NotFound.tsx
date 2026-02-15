@@ -5,7 +5,13 @@ const NotFound: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGoBack = () => {
-    navigate(-1); // go back to previous page
+    // Check if there is a history entry to go back to.
+    // React Router manages history state with an 'idx' (index) counter.
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1); // Go back to previous page
+    } else {
+      navigate("/LandPage", { replace: true }); // Redirect to LandPage (Home) if no history
+    }
   };
 
   return (
