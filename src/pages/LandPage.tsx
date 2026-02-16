@@ -14,6 +14,7 @@ import Logo from "../images/Logo.png";
 import InputField from "@/components/InputField";
 import PrimaryButton from "@/components/PrimaryButton";
 import CheckBox from "@/components/CheckBox";
+axios.defaults.withCredentials = true;
 
 function Home() {
   const navigate = useNavigate();

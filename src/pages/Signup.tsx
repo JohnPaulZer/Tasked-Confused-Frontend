@@ -9,6 +9,7 @@ import CheckBox from "@/components/CheckBox";
 import InputField from "@/components/InputField";
 import PrimaryButton from "@/components/PrimaryButton";
 import Logo from "../images/Logo.png";
+axios.defaults.withCredentials = true;
 
 function Signup() {
   const navigate = useNavigate();
