@@ -2,7 +2,7 @@ import PrimaryButton from "@/components/PrimaryButton";
 import { useNavigate } from "react-router-dom";
 import Logo from "../images/Logo.png";
 
-function LandPage() {
+function Home() {
   const navigate = useNavigate();
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden">
@@ -41,4 +41,4 @@ function LandPage() {
   );
 }
 
-export default LandPage;
+export default Home;

@@ -3,6 +3,8 @@ import { CgMenuGridO } from "react-icons/cg";
 import { IoClose, IoHomeOutline, IoTimeOutline, IoLogOutOutline, IoSearchOutline } from "react-icons/io5";
 import { BiUserCircle } from "react-icons/bi";
 import { useNavigate } from "react-router-dom";
+import axios from "axios"; 
+import Modal from "@/components/Modal"; // 👈 1. Import Modal
 
 interface HeaderProps {
   logo: string;
@@ -17,13 +19,50 @@ const Header: React.FC<HeaderProps> = ({
   onMenuClick,
   rightElement,
 }) => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  
+  // --- STATE FOR LOGOUT MODAL ---
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  const [userName] = useState(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const userObj = JSON.parse(storedUser);
+        return userObj.name || "User";
+      } catch (error) {
+        console.error("Failed to parse user from localStorage", error);
+        return "";
+      }
+    }
+    return "User";
+  });
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
     if (onMenuClick) onMenuClick();
   };
-  const navigate = useNavigate();
+
+  // --- 2. CLICK HANDLER (Triggers transition) ---
+  const handleLogoutClick = () => {
+    setIsOpen(false); // Close sidebar first (Smooth transition)
+    setIsLogoutModalOpen(true); // Then open modal
+  };
+
+  // --- 3. ACTUAL LOGOUT LOGIC (Runs on Confirm) ---
+  const confirmLogout = async () => {
+    try {
+      await axios.post("http://localhost:5000/api/auth/logout");
+      localStorage.removeItem("user");
+      setIsLogoutModalOpen(false); // Close modal
+      navigate("/LandPage");
+    } catch (error) {
+      console.error("Logout failed", error);
+      localStorage.removeItem("user");
+      navigate("/LandPage");
+    }
+  };
 
   return (
     <>
@@ -54,7 +93,6 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* --- SIDEBAR OVERLAY --- */}
-      {/* Dark Backdrop */}
       <div 
         className={`fixed inset-0 bg-black/50 z-[100] transition-opacity duration-300 ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
         onClick={toggleSidebar}
@@ -70,7 +108,7 @@ const Header: React.FC<HeaderProps> = ({
               <BiUserCircle />
             </div>
             <div className="flex flex-col">
-              <span className="text-primary text-xl font-bold">John Paul</span>
+              <span className="text-primary text-xl font-bold">{userName}</span>
             </div>
           </div>
           <button onClick={toggleSidebar} className="text-primary text-3xl">
@@ -94,14 +132,47 @@ const Header: React.FC<HeaderProps> = ({
           <SidebarLink icon={<IoTimeOutline />} label="History" onClick={() => { navigate('/history'); toggleSidebar(); }} />
           <SidebarLink icon={<BiUserCircle />} label="Profile" onClick={() => { navigate('/profile'); toggleSidebar(); }} />
           <hr className="border-primary/10 my-2" />
-          <SidebarLink icon={<IoLogOutOutline />} label="Log Out" onClick={toggleSidebar} colorClass="text-red-400" />
+          
+          {/* 4. Update Logout Link to use new Handler */}
+          <SidebarLink 
+            icon={<IoLogOutOutline />} 
+            label="Log Out" 
+            onClick={handleLogoutClick} // 👈 Calls the intermediate function
+            colorClass="text-red-400" 
+          />
         </nav>
       </div>
+
+      {/* --- 5. LOGOUT CONFIRMATION MODAL --- */}
+      <Modal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        title="Log Out"
+        footer={
+          <>
+            <button 
+              onClick={() => setIsLogoutModalOpen(false)}
+              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={confirmLogout}
+              className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition shadow-md"
+            >
+              Yes, Log Out
+            </button>
+          </>
+        }
+      >
+        <p className="text-lg">Are you sure you want to log out?</p>
+      </Modal>
+
     </>
   );
 };
 
-// Helper component for clean nav items
+// Helper component
 const SidebarLink = ({ icon, label, onClick, colorClass = "text-primary" }: { icon: React.ReactNode, label: string, onClick: () => void, colorClass?: string }) => (
   <button 
     onClick={onClick}

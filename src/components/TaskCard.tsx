@@ -43,7 +43,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       {/* Right Section: Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 font-serif">
         <div className="flex items-center gap-2 text-xl text-primary">
           {onEdit && (
             <MdOutlineEdit className="cursor-pointer" onClick={onEdit} />

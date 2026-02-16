@@ -1,15 +1,23 @@
 import React, { useState } from "react";
 
+// 1. Define Task Interface locally (or import it)
+interface Task {
+  date: string | Date; // Depending on how your backend sends it
+  
+}
+
 interface DateSchedProps {
   initialDate?: Date;
   daysToShow?: number; // default 30
   onSelectDate?: (date: Date) => void;
+  tasks?: Task[]; // 👈 2. Add tasks prop
 }
 
 const DateSched: React.FC<DateSchedProps> = ({
   initialDate = new Date(),
   daysToShow = 30,
   onSelectDate,
+  tasks = [] // Default to empty array
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
 
@@ -33,6 +41,14 @@ const DateSched: React.FC<DateSchedProps> = ({
     date1.getMonth() === date2.getMonth() &&
     date1.getFullYear() === date2.getFullYear();
 
+  // 3. Helper to check if a specific date has at least one task
+  const hasTaskOnDate = (dateToCheck: Date) => {
+    return tasks.some((task) => {
+      const taskDate = new Date(task.date);
+      return isSameDay(taskDate, dateToCheck);
+    });
+  };
+
   const handleSelectDate = (date: Date) => {
     setSelectedDate(date);
     onSelectDate?.(date);
@@ -46,6 +62,7 @@ const DateSched: React.FC<DateSchedProps> = ({
       >
         {daysList.map((date, index) => {
           const isActive = isSameDay(date, selectedDate);
+          const hasTask = hasTaskOnDate(date); // 👈 4. Check for task
 
           return (
             <div
@@ -53,7 +70,7 @@ const DateSched: React.FC<DateSchedProps> = ({
               onClick={() => handleSelectDate(date)}
               className={`
                 flex flex-col items-center justify-center
-                min-w-[4.5rem] h-24 rounded-2xl cursor-pointer transition-all duration-300
+                min-w-18 h-24 rounded-2xl cursor-pointer transition-all duration-300
                 border border-secondary/20 shadow-sm font-serif relative
                 ${isActive
                   ? "bg-secondary text-primary scale-105 font-bold"
@@ -65,6 +82,16 @@ const DateSched: React.FC<DateSchedProps> = ({
                 {date.toLocaleDateString("en-US", { weekday: "short" })}
               </span>
               <span className="text-2xl">{date.getDate()}</span>
+
+              {/* 👇 5. TASK INDICATOR DOT */}
+              {hasTask && (
+                <div 
+                  className={`
+                    absolute bottom-2 h-1.5 w-1.5 rounded-full 
+                    ${isActive ? "bg-primary" : "bg-secondary"}
+                  `} 
+                />
+              )}
             </div>
           );
         })}

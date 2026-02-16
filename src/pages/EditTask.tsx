@@ -2,8 +2,8 @@ import ActCard from "@/components/ActCard";
 import BackButton from "@/components/BackButton";
 import Header from "@/components/Header";
 import PrimaryButton from "@/components/PrimaryButton";
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate, useBlocker } from "react-router-dom"; 
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, useBlocker } from "react-router-dom"; 
 import axios from "axios"; 
 import Modal from "@/components/Modal"; 
 
@@ -15,65 +15,32 @@ import { IoFastFoodSharp } from "react-icons/io5";
 import { MdChevronLeft, MdChevronRight, MdSportsVolleyball } from "react-icons/md";
 import Logo from "../images/Logo.png";
 
-function AddTask() {
+function EditTask() {
   const navigate = useNavigate();
-  const location = useLocation(); 
+  const { id } = useParams(); 
 
-  const categoryTitle = location.state?.category || "Study";
-
-  // --- Calendar State ---
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  
   // --- Form State ---
   const [taskName, setTaskName] = useState("");
   const [taskTime, setTaskTime] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
+  const [categoryTitle, setCategoryTitle] = useState("Study"); 
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  
   const [loading, setLoading] = useState(false);
-  const [isSaved, setIsSaved] = useState(false); // New state to track if save was successful
+  const [fetching, setFetching] = useState(true);
+  const [isSaved, setIsSaved] = useState(false); 
 
-  // --- 1. MODAL STATE (Reusable) ---
+  // --- MODAL STATE ---
   const [modal, setModal] = useState({
     isOpen: false,
     title: "",
     message: "",
-    type: "alert", // 'alert' (OK) or 'confirm' (Yes/No)
+    type: "alert", // 'alert' or 'confirm'
     onConfirm: null as (() => void) | null, 
   });
 
-  // --- 2. DIRTY FORM DETECTION ---
-  // Check if user has typed anything
-  const isDirty = (taskName !== "" || taskTime !== "" || taskDescription !== "") && !isSaved;
-
-  // --- 3. INTERCEPT NAVIGATION (React Router v6) ---
-  // This blocks navigation if the form is dirty
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isDirty && currentLocation.pathname !== nextLocation.pathname
-  );
-
-  // If the blocker is active, show the confirmation modal
-  useEffect(() => {
-    if (blocker.state === "blocked") {
-      setModal({
-        isOpen: true,
-        title: "Unsaved Changes",
-        message: "You have unsaved changes. Are you sure you want to leave?",
-        type: "confirm", // Show Yes/No buttons
-        onConfirm: () => blocker.proceed(), // If Yes, let them leave
-      });
-    }
-  }, [blocker.state]);
-
-  // Handle Cancel Logic for the blocker
-  const handleCancelLeave = () => {
-    setModal({ ...modal, isOpen: false });
-    if (blocker.state === "blocked") {
-      blocker.reset(); // Stay on the page
-    }
-  };
-
-  // --- Helper to open Alert Modal ---
+  // --- Helper to Show Alert ---
   const showAlert = (title: string, message: string, onOk?: () => void) => {
     setModal({ 
       isOpen: true, 
@@ -83,6 +50,56 @@ function AddTask() {
       onConfirm: onOk || null 
     });
   };
+
+  // --- BLOCKER: Always ask when leaving (unless saved) ---
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      !isSaved && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  useEffect(() => {
+    if (blocker.state === "blocked") {
+      setModal({
+        isOpen: true,
+        title: "Confirm Navigation",
+        message: "Are you sure you want to leave? Any unsaved changes will be lost.",
+        type: "confirm",
+        onConfirm: () => blocker.proceed(), 
+      });
+    }
+  }, [blocker.state]);
+
+  const handleCancelModal = () => {
+    setModal({ ...modal, isOpen: false });
+    if (blocker.state === "blocked") {
+      blocker.reset(); 
+    }
+  };
+
+  // --- Fetch Data ---
+  useEffect(() => {
+    const fetchTask = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/tasks/${id}`);
+        const task = response.data.task || response.data; 
+
+        setTaskName(task.title);
+        setTaskTime(task.time);
+        setTaskDescription(task.description);
+        setCategoryTitle(task.category);
+        setSelectedDate(new Date(task.date)); 
+        
+      } catch (error) {
+        console.error("Error fetching task:", error);
+        showAlert("Error", "Failed to load task details.", () => navigate("/MainPage"));
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    if (id) fetchTask();
+  }, [id, navigate]);
+
 
   const getIcon = (title: string) => {
     switch (title) {
@@ -94,41 +111,51 @@ function AddTask() {
     }
   };
 
-  // --- 4. SUBMIT FUNCTION ---
-  const handleSubmit = async () => {
-    if (!taskName) return showAlert("Missing Input", "Please enter a task name.");
-    if (!taskTime) return showAlert("Missing Input", "Please select a time.");
-    if (!selectedDate) return showAlert("Missing Input", "Please select a date.");
-    if (taskDescription.length > 200) return showAlert("Description Too Long", "Description must be under 200 characters.");
-    
-    if (loading) return; 
-    
+  // --- 1. ACTUAL SAVE LOGIC (Runs only after confirmation) ---
+  const confirmUpdate = async () => {
     setLoading(true);
     try {
-      const offset = selectedDate.getTimezoneOffset() * 60000; 
-      const locatDate = new Date(selectedDate.getTime() - offset); 
-      const cleanDate = locatDate.toISOString().split("T")[0]; 
+      const offset = selectedDate.getTimezoneOffset() * 60000;
+      const localDate = new Date(selectedDate.getTime() - offset);
+      const cleanDate = localDate.toISOString().split("T")[0];
 
-      await axios.post("http://localhost:5000/api/tasks", {
+      await axios.put(`http://localhost:5000/api/tasks/${id}`, {
         title: taskName,
         time: taskTime,
         description: taskDescription,
         category: categoryTitle,
-        date: cleanDate, 
+        date: cleanDate,
       });
 
-      setIsSaved(true); // Mark as saved so blocker doesn't trigger
-      
-      showAlert("Success!", "Task Added Successfully!", () => {
-        navigate("/MainPage");
+      setIsSaved(true); // Allow navigation
+
+      showAlert("Success!", "Task Updated Successfully!", () => {
+        navigate("/MainPage"); 
       });
 
     } catch (error) {
-      console.error("Error adding task:", error);
-      showAlert("Error", "Failed to add task. Please try again.");
+      console.error("Error updating task:", error);
+      showAlert("Error", "Failed to update task.");
     } finally {
       setLoading(false);
     }
+  };
+
+  // --- 2. BUTTON CLICK HANDLER (Validates & Opens Modal) ---
+  const handleSaveClick = () => {
+    if (!taskName) return showAlert("Missing Input", "Please enter a task name");
+    if (!taskTime) return showAlert("Missing Input", "Please select a time");
+    if (!selectedDate) return showAlert("Missing Input", "Please select a date");
+    if (taskDescription.length > 200) return showAlert("Description Too Long", "Description must be under 200 characters");
+
+    // Open Confirmation Modal
+    setModal({
+      isOpen: true,
+      title: "Save Changes",
+      message: "Are you sure you want to save these changes?",
+      type: "confirm", // Show Yes/No
+      onConfirm: confirmUpdate, // 👈 Triggers the actual save
+    });
   };
 
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -139,11 +166,13 @@ function AddTask() {
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const handleDateClick = (day: number) => setSelectedDate(new Date(year, month, day));
-  const isSelected = (day: number) => selectedDate.getDate() === day && selectedDate.getMonth() === month;
+  const isSelected = (day: number) => selectedDate.getDate() === day && selectedDate.getMonth() === month && selectedDate.getFullYear() === year;
   const isToday = (day: number) => {
       const today = new Date();
-      return day === today.getDate() && month === today.getMonth();
+      return day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
   };
+
+  if (fetching) return <div className="min-h-screen bg-primary flex items-center justify-center text-secondary">Loading...</div>;
 
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden pb-8 relative">
@@ -156,15 +185,13 @@ function AddTask() {
 
       <div className="relative z-10 flex flex-col w-full h-full">
         <div>
-          <Header logo={Logo} title="Create New Task" />
+          <Header logo={Logo} title="Edit Task" />
           <div className="">
-            {/* Custom back logic not needed because useBlocker intercepts it automatically */}
             <BackButton />
           </div>
         </div>
 
-        {/* ... Calendar UI & Category Card (Same as before) ... */}
-        
+        {/* Calendar UI */}
         <div className="px-5 mt-6">
           <div className="bg-secondary/50 rounded-3xl p-5 shadow-lg border border-primary font-serif">
             <div className="flex items-center justify-between mb-4">
@@ -189,15 +216,17 @@ function AddTask() {
           </div>
         </div>
 
+        {/* Selected Category Display */}
         <div>
           <ActCard
             disabled
-            icon={getIcon(categoryTitle)} 
-            title={categoryTitle}         
+            icon={getIcon(categoryTitle)}
+            title={categoryTitle}       
             subtitle="Selected"
           />
         </div>
 
+        {/* Input Fields */}
         <div className="px-5 mt-6 space-y-4">
           <div>
             <label className="text-primary font-semibold text-sm block mb-2">Task Name</label>
@@ -214,39 +243,40 @@ function AddTask() {
             <textarea value={taskDescription} onChange={(e) => setTaskDescription(e.target.value)} placeholder="Enter task description" rows={4} className="w-full px-4 py-2 rounded-lg border-2 border-primary bg-secondary text-primary focus:outline-none font-serif resize-none" />
           </div>
           
-          <div onClick={handleSubmit}>
-            <PrimaryButton content={loading ? "Saving..." : "Add Task"} />
+          {/* Submit Button */}
+          <div onClick={handleSaveClick}>
+            <PrimaryButton content={loading ? "Updating..." : "Save Changes"} />
           </div>
         </div>
       </div>
 
-      {/* --- 5. RENDER MODAL --- */}
+      {/* --- MODAL --- */}
       <Modal
         isOpen={modal.isOpen}
-        onClose={handleCancelLeave} // Clicking background closes modal and cancels leave
+        onClose={handleCancelModal}
         title={modal.title}
         footer={
           modal.type === "confirm" ? (
-            // --- CONFIRMATION FOOTER (Yes/No) ---
+            // --- CONFIRM FOOTER (Yes/No) ---
             <>
               <button 
-                onClick={handleCancelLeave}
+                onClick={handleCancelModal}
                 className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition"
               >
-                No, Stay
+                No
               </button>
               <button 
                 onClick={() => {
                   setModal({ ...modal, isOpen: false });
-                  if (modal.onConfirm) modal.onConfirm(); // Proceed with navigation
+                  if (modal.onConfirm) modal.onConfirm(); 
                 }}
                 className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition shadow-md"
               >
-                Yes, Leave
+                Yes
               </button>
             </>
           ) : (
-            // --- ALERT FOOTER (Okay only) ---
+            // --- ALERT FOOTER (Okay) ---
             <div className="flex justify-center w-full">
               <button 
                 onClick={() => {
@@ -268,4 +298,4 @@ function AddTask() {
   );
 }
 
-export default AddTask;
+export default EditTask;
