@@ -33,9 +33,12 @@ function MainPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 
-  // 👇 New State for Edit Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<string | null>(null);
+
+  // 👇 NEW: COMPLETE MODAL STATE
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [taskToComplete, setTaskToComplete] = useState<string | null>(null);
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "long",
@@ -89,7 +92,7 @@ function MainPage() {
     } 
   };
 
-  // --- 👇 EDIT LOGIC ---
+  // --- EDIT LOGIC ---
   const initiateEdit = (taskId: string) => {
     setTaskToEdit(taskId);
     setIsEditModalOpen(true);
@@ -100,6 +103,50 @@ function MainPage() {
       navigate(`/EditTask/${taskToEdit}`);
       setIsEditModalOpen(false);
       setTaskToEdit(null);
+    }
+  };
+
+  // --- 👇 NEW: TOGGLE LOGIC WITH MODAL ---
+  
+  // 1. Triggered when checkbox is clicked
+  const handleToggleClick = (taskId: string, currentStatus: boolean) => {
+    if (!currentStatus) {
+      // If task is NOT complete, we are trying to Complete it -> SHOW MODAL
+      setTaskToComplete(taskId);
+      setIsCompleteModalOpen(true);
+    } else {
+      // If task is ALREADY complete, we are un-completing it -> Do it immediately
+      performTaskUpdate(taskId, false);
+    }
+  };
+
+  // 2. Triggered when user clicks "Yes" in Modal
+  const confirmComplete = () => {
+    if (taskToComplete) {
+      performTaskUpdate(taskToComplete, true); // Set to True
+      setIsCompleteModalOpen(false);
+      setTaskToComplete(null);
+    }
+  };
+
+  // 3. Shared function to actually update Backend & State
+  const performTaskUpdate = async (taskId: string, newStatus: boolean) => {
+    try {
+      // Optimistic Update
+      setTasks((prev) => 
+        prev.map((t) => t._id === taskId ? { ...t, isCompleted: newStatus } : t)
+      );
+
+      await axios.put(`http://localhost:5000/api/tasks/${taskId}`, {
+        isCompleted: newStatus
+      }, { withCredentials: true });
+
+    } catch (error) {
+      console.error("Error updating status:", error);
+      // Revert if failed
+      setTasks((prev) => 
+        prev.map((t) => t._id === taskId ? { ...t, isCompleted: !newStatus } : t)
+      );
     }
   };
 
@@ -135,7 +182,7 @@ function MainPage() {
 
       <Header logo={Logo} title={currentDate} />
 
-      <div className="relative z-10 flex flex-col flex-grow">
+      <div className="relative z-10 flex flex-col grow">
         <h1 className="text-3xl text-secondary font-serif font-bold text-left px-5">
           <span className="text-5xl">Hello! </span>
           <br />
@@ -189,7 +236,7 @@ function MainPage() {
           )}
         </div>
 
-        <div className="px-5 pb-10 flex flex-col gap-2 min-h-[200px]">
+        <div className="px-5 pb-10 flex flex-col gap-2 min-h-50">
           {loading ? (
             <p className="text-secondary text-center mt-10 animate-pulse">
               Loading tasks...
@@ -211,12 +258,14 @@ function MainPage() {
                 time={formatTime(task.time)} 
                 title={task.title}
                 description={task.description || "No description"}
+                
+                // Pass current status
                 completed={task.isCompleted}
-                onToggleComplete={() => console.log("Toggle", task._id)}
                 
-                // 👇 Update to use initiateEdit
+                // 👇 Call our logic instead of direct update
+                onToggleComplete={() => handleToggleClick(task._id, task.isCompleted)}
+                
                 onEdit={() => initiateEdit(task._id)}
-                
                 onDelete={() => initiateDelete(task._id)}
               />
             ))
@@ -250,7 +299,7 @@ function MainPage() {
         <p className="text-sm opacity-70 mt-2">This action cannot be undone.</p>
       </Modal>
 
-      {/* --- 👇 NEW EDIT MODAL --- */}
+      {/* --- EDIT MODAL --- */}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -273,6 +322,32 @@ function MainPage() {
         }
       >
         <p className="text-lg">Do you want to edit this task?</p>
+      </Modal>
+
+      {/* --- 👇 NEW: COMPLETE TASK MODAL --- */}
+      <Modal
+        isOpen={isCompleteModalOpen}
+        onClose={() => setIsCompleteModalOpen(false)}
+        title="Complete Task"
+        footer={
+          <>
+            <button 
+              onClick={() => setIsCompleteModalOpen(false)}
+              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={confirmComplete}
+              className="px-6 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition shadow-md"
+            >
+              Yes, Complete
+            </button>
+          </>
+        }
+      >
+        <p className="text-lg">Mark this task as completed?</p>
+        <p className="text-sm opacity-70 mt-2">Good job! Keep it up. 🎉</p>
       </Modal>
 
     </div>

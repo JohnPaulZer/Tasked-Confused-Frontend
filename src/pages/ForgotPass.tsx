@@ -1,19 +1,44 @@
+import React, { useState } from "react";
 import InputField from "@/components/InputField";
 import PrimaryButton from "@/components/PrimaryButton";
 import { FaLock } from "react-icons/fa";
 import { IoMdArrowRoundBack } from "react-icons/io";
 import { MdEmail } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-// import CheckBox from "@/components/CheckBox";
+import axios from "axios";
 
-function ForgotPass() {
+const ForgotPass: React.FC = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const handleSendOtp = async () => {
+    if (!email) return alert("Please enter your email");
+
+    setLoading(true);
+    try {
+      await axios.post("http://localhost:5000/api/auth/forgot-password", { email });
+      alert("OTP sent to your email!");
+      navigate("/verify", { state: { email } });
+    } catch (error: unknown) {
+      // Use Axios type guard to safely access response data
+      if (axios.isAxiosError(error)) {
+        alert(error.response?.data?.message || "Error sending OTP");
+      } else {
+        // Fallback for non-axios errors (e.g., network failure or code crash)
+        alert("An unexpected error occurred");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden relative">
-      {/* Back Button - Top Right */}
+      {/* Back Button */}
       <button
         className="absolute top-6 left-6 z-50 text-primary hover:opacity-80 transition-opacity"
-        onClick={() => window.history.back()} // Optional: adds simple back functionality
+        onClick={() => window.history.back()}
       >
         <IoMdArrowRoundBack size={30} />
       </button>
@@ -39,32 +64,37 @@ function ForgotPass() {
         <FaLock className="w-auto h-50 text-primary" />
       </div>
 
-      {/* The Curve Section / Content Area */}
+      {/* Content Area */}
       <div className="relative grow flex flex-col">
         <div className="w-full max-w-sm mx-auto mt-6">
           <h1 className="text-3xl text-secondary mt-30 mb-8 font-serif uppercase tracking-tight text-center">
             Forgot Password
           </h1>
           <p className="text-secondary text-center max-w-md mx-auto pb-5">
-            Enter your email address and we'll send you a OTP to reset your
-            password.
+            Enter your email address and we'll send you a OTP to reset your password.
           </p>
-          <InputField
-            type="email"
-            placeholder="Enter your email"
-            icon={<MdEmail />}
-          />
+
+          <div className="mb-4">
+            <InputField
+              type="email"
+              placeholder="Enter your email"
+              icon={<MdEmail />}
+              value={email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            />
+          </div>
+
           <PrimaryButton
-            content="Send OTP"
+            content={loading ? "Sending..." : "Send OTP"}
             bgColorClass="bg-secondary"
             colorClass="text-primary"
             hoverBgColorClass="hover:bg-primary hover:text-secondary"
-            onClick={() => navigate("/verify")}
+            onClick={handleSendOtp}
           />
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default ForgotPass;

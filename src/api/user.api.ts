@@ -1,0 +1,156 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import axiosInstance from "../../../axios/axiosInstance";
+import { handleError } from "../../../axios/errorHandler";
+
+
+// if axiosInstance.baseURL === '/api'
+export const fetchOtherUsers = async () => {
+  try {
+    const { data } = await axiosInstance.get("api/users", {
+      headers: { "Cache-Control": "no-cache" },
+    });
+    return data;
+  } catch (err: any) {
+    if (err?.response?.status === 304) {
+      const { data } = await axiosInstance.get("api/users", {
+        params: { t: Date.now() },
+      });
+      return data;
+    }
+    // Don't throw error for 401 - it's expected when not authenticated
+    if (err?.response?.status === 401) {
+      throw err;
+    }
+    return handleError(err);
+  }
+};
+
+export const fetchDTR = async (id: string) => {
+  try {
+    const response = await axiosInstance.get(`api/dtr/all/${id}`);
+    return response;
+  } catch (error: unknown) {
+    return handleError(error);
+  }
+};
+
+export const fetchOwnDTR = async () => {
+  try {
+    const response = await axiosInstance.get("/api/dtr");
+    return response;
+  } catch (error: unknown) {
+    return handleError(error);
+  }
+};
+
+export const fetchSchedule = async () => {
+  try {
+    const response = await axiosInstance.get("api/schedule");
+    return response;
+  } catch (error: unknown) {
+    return handleError(error);
+  }
+};
+
+export const fetchUserDetails = async () => {
+  try {
+    const response = await axiosInstance.get("api/users/profile/me");
+    return response;
+  } catch (error: unknown) {
+    // Don't throw error for 401 - it's expected when not authenticated
+    if (error && typeof error === 'object' && 'response' in error) {
+      const axiosError = error as { response?: { status?: number } };
+      if (axiosError.response?.status === 401) {
+        // Return a rejected promise but don't log error
+        throw error;
+      }
+    }
+    return handleError(error);
+  }
+};
+
+export const updateUserProfile = async (
+  userId: string,
+  profileData: {
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    about?: string;
+    gender?: string;
+    dateOfBirth?: string;
+    profilePictureFile?: File;
+    profilePictureUrl?: string;
+    oldPassword?: string;
+    newPassword?: string;
+    position?: string[];
+  }
+) => {
+  try {
+    const formData = new FormData();
+
+    // Append all profile fields
+    if (profileData.firstName !== undefined) {
+      formData.append("firstName", profileData.firstName);
+    }
+    if (profileData.middleName !== undefined) {
+      formData.append("middleName", profileData.middleName);
+    }
+    if (profileData.lastName !== undefined) {
+      formData.append("lastName", profileData.lastName);
+    }
+    if (profileData.email !== undefined) {
+      formData.append("email", profileData.email);
+    }
+    if (profileData.phone !== undefined) {
+      formData.append("phone", profileData.phone);
+    }
+    if (profileData.about !== undefined) {
+      formData.append("about", profileData.about);
+    }
+    if (profileData.gender !== undefined) {
+      formData.append("gender", profileData.gender);
+    }
+    if (profileData.dateOfBirth !== undefined) {
+      formData.append("dateOfBirth", profileData.dateOfBirth);
+    }
+    if (profileData.oldPassword !== undefined) {
+      formData.append("oldPassword", profileData.oldPassword);
+    }
+    if (profileData.newPassword !== undefined) {
+      formData.append("newPassword", profileData.newPassword);
+    }
+    // Upload file using chunk uploader if a file is provided
+    if (profileData.profilePictureFile) {
+      const { uploadFileInChunks } = await import("../../../utils/global/chunkUploader");
+      const imageUrl = await uploadFileInChunks(
+        profileData.profilePictureFile,
+        `hrms/admin/employees/profile`
+      );
+      formData.append("image", imageUrl);
+    } else if (profileData.profilePictureUrl) {
+      formData.append("image", profileData.profilePictureUrl);
+    }
+
+    if (profileData.position) {
+      profileData.position.forEach((role, index) => {
+        formData.append(`position[${index}]`, role);
+      });
+    }
+
+    const response = await axiosInstance.put(`api/users/profile/${userId}`, formData);
+    return response.data;
+  } catch (error: unknown) {
+    return handleError(error);
+  }
+};
+
+export const switchUserRole = async (role: string) => {
+  try {
+    const response = await axiosInstance.put("api/users/switch-role", { role });
+    return response.data;
+  } catch (error: unknown) {
+    return handleError(error);
+  }
+};
