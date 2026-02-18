@@ -1,81 +1,137 @@
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
 // Icons
-import { MdOutlineAssignmentLate } from "react-icons/md"; 
+import { MdOutlineAssignmentLate } from "react-icons/md";
 
 // Components
 import DateSched from "@/components/DateSched";
 import Header from "@/components/Header";
+import Modal from "@/components/Modal";
 import PrimaryButton from "@/components/PrimaryButton";
-import TaskCard from "@/components/TaskCard"; 
-import Modal from "@/components/Modal"; 
+import TaskCard from "@/components/TaskCard";
 import Logo from "../images/Logo.png";
 
+/**
+ * TASK INTERFACE
+ * Represents a single task object structure
+ */
 interface Task {
   _id: string;
   title: string;
-  description?: string; 
+  description?: string;
   isCompleted: boolean;
   createdAt: string;
-  date: string; 
-  time: string; 
+  date: string;
+  time: string;
 }
 
+/**
+ * MAIN PAGE - Dashboard for Task Management
+ *
+ * This is the main authenticated dashboard where users can:
+ * - View all their tasks
+ * - Filter tasks by date
+ * - Create, edit, delete tasks
+ * - Mark tasks as complete
+ *
+ * Features:
+ * - Real-time task loading from backend
+ * - Date filtering with calendar picker
+ * - Multiple modal confirmations (delete, edit, complete)
+ * - Optimistic UI updates for better UX
+ * - Task count display
+ */
 function MainPage() {
   const navigate = useNavigate();
+
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
+
+  /** All tasks fetched from backend */
   const [tasks, setTasks] = useState<Task[]>([]);
+
+  /** Loading state while fetching tasks from API */
   const [loading, setLoading] = useState(true);
+
+  /** Current filter date - null means show all tasks */
   const [filterDate, setFilterDate] = useState<string | null>(null);
 
-  // --- MODAL STATES ---
+  /** Delete modal states */
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
 
+  /** Edit modal states */
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<string | null>(null);
 
-  // 👇 NEW: COMPLETE MODAL STATE
+  /** Complete task modal states */
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [taskToComplete, setTaskToComplete] = useState<string | null>(null);
 
+  // Get current date in user-friendly format
   const currentDate = new Date().toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
   });
 
+  // ============================================================================
+  // API CALLS
+  // ============================================================================
+
+  /**
+   * FETCH TASKS
+   * Retrieves all tasks from backend for the authenticated user
+   * Handles different response formats for flexibility
+   */
   const fetchTasks = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/tasks", { 
-        withCredentials: true 
+      const response = await axios.get("http://localhost:5000/api/tasks", {
+        withCredentials: true,
       });
 
+      // Handle different API response formats
       if (response.data.tasks && Array.isArray(response.data.tasks)) {
-        setTasks(response.data.tasks); 
+        setTasks(response.data.tasks);
       } else if (Array.isArray(response.data)) {
         setTasks(response.data);
       } else {
-        setTasks([]); 
+        setTasks([]);
       }
     } catch (error) {
       console.error("Error fetching tasks:", error);
-      setTasks([]); 
+      setTasks([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch tasks on component mount
   useEffect(() => {
     fetchTasks();
   }, []);
 
-  // --- DELETE LOGIC ---
+  // ============================================================================
+  // DELETE TASK HANDLERS
+  // ============================================================================
+
+  /**
+   * INITIATE DELETE
+   * Opens delete confirmation modal for a task
+   * @param taskId - ID of task to delete
+   */
   const initiateDelete = (taskId: string) => {
-    setTaskToDelete(taskId);     
-    setIsDeleteModalOpen(true);  
+    setTaskToDelete(taskId);
+    setIsDeleteModalOpen(true);
   };
 
+  /**
+   * CONFIRM DELETE
+   * Permanently deletes task from backend after user confirms
+   * Updates UI optimistically on success
+   */
   const confirmDelete = async () => {
     if (!taskToDelete) return;
 
@@ -83,21 +139,34 @@ function MainPage() {
       await axios.delete(`http://localhost:5000/api/tasks/${taskToDelete}`, {
         withCredentials: true,
       });
+      // Remove task from state
       setTasks((prev) => prev.filter((task) => task._id !== taskToDelete));
-      setIsDeleteModalOpen(false); 
-      setTaskToDelete(null);       
+      setIsDeleteModalOpen(false);
+      setTaskToDelete(null);
     } catch (error) {
       console.error("Error deleting task:", error);
       alert("Failed to delete task");
-    } 
+    }
   };
 
-  // --- EDIT LOGIC ---
+  // ============================================================================
+  // EDIT TASK HANDLERS
+  // ============================================================================
+
+  /**
+   * INITIATE EDIT
+   * Opens edit confirmation modal and navigates to edit page
+   * @param taskId - ID of task to edit
+   */
   const initiateEdit = (taskId: string) => {
     setTaskToEdit(taskId);
     setIsEditModalOpen(true);
   };
 
+  /**
+   * CONFIRM EDIT
+   * Navigates to EditTask page with task ID
+   */
   const confirmEdit = () => {
     if (taskToEdit) {
       navigate(`/EditTask/${taskToEdit}`);
@@ -106,66 +175,111 @@ function MainPage() {
     }
   };
 
-  // --- 👇 NEW: TOGGLE LOGIC WITH MODAL ---
-  
-  // 1. Triggered when checkbox is clicked
+  // ============================================================================
+  // COMPLETE TASK HANDLERS
+  // ============================================================================
+
+  /**
+   * HANDLE TOGGLE CLICK
+   * Triggered when user clicks task checkbox
+   * If task is not complete: Show confirmation modal
+   * If task is already complete: Immediately unmark as complete
+   *
+   * @param taskId - ID of task being toggled
+   * @param currentStatus - Current completion status
+   */
   const handleToggleClick = (taskId: string, currentStatus: boolean) => {
     if (!currentStatus) {
-      // If task is NOT complete, we are trying to Complete it -> SHOW MODAL
+      // Task is NOT complete -> Show modal before completing
       setTaskToComplete(taskId);
       setIsCompleteModalOpen(true);
     } else {
-      // If task is ALREADY complete, we are un-completing it -> Do it immediately
+      // Task is ALREADY complete -> Immediately unmark it
       performTaskUpdate(taskId, false);
     }
   };
 
-  // 2. Triggered when user clicks "Yes" in Modal
+  /**
+   * CONFIRM COMPLETE
+   * Called when user clicks "Yes, Complete" in modal
+   * Sends update to backend
+   */
   const confirmComplete = () => {
     if (taskToComplete) {
-      performTaskUpdate(taskToComplete, true); // Set to True
+      performTaskUpdate(taskToComplete, true);
       setIsCompleteModalOpen(false);
       setTaskToComplete(null);
     }
   };
 
-  // 3. Shared function to actually update Backend & State
+  /**
+   * PERFORM TASK UPDATE
+   * Updates task completion status in backend and UI
+   * Uses optimistic updates for immediate UI feedback
+   *
+   * @param taskId - ID of task to update
+   * @param newStatus - New completion status (true = complete, false = incomplete)
+   */
   const performTaskUpdate = async (taskId: string, newStatus: boolean) => {
     try {
-      // Optimistic Update
-      setTasks((prev) => 
-        prev.map((t) => t._id === taskId ? { ...t, isCompleted: newStatus } : t)
+      // Optimistic update - update UI immediately
+      setTasks((prev) =>
+        prev.map((t) =>
+          t._id === taskId ? { ...t, isCompleted: newStatus } : t,
+        ),
       );
 
-      await axios.put(`http://localhost:5000/api/tasks/${taskId}`, {
-        isCompleted: newStatus
-      }, { withCredentials: true });
-
+      // Send update to backend
+      await axios.put(
+        `http://localhost:5000/api/tasks/${taskId}`,
+        { isCompleted: newStatus },
+        { withCredentials: true },
+      );
     } catch (error) {
       console.error("Error updating status:", error);
-      // Revert if failed
-      setTasks((prev) => 
-        prev.map((t) => t._id === taskId ? { ...t, isCompleted: !newStatus } : t)
+      // Revert optimistic update on failure
+      setTasks((prev) =>
+        prev.map((t) =>
+          t._id === taskId ? { ...t, isCompleted: !newStatus } : t,
+        ),
       );
     }
   };
 
+  // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
+
+  /**
+   * FORMAT TIME
+   * Converts 24-hour time format (HH:MM) to 12-hour format (H:MM AM/PM)
+   * @param timeStr - Time string in HH:MM format
+   * @returns Formatted time string
+   */
   const formatTime = (timeStr: string) => {
     if (!timeStr) return "";
-    const [hour, minute] = timeStr.split(":")
+    const [hour, minute] = timeStr.split(":");
     let hourNum = parseInt(hour);
     const ampm = hourNum >= 12 ? "PM" : "AM";
     hourNum = hourNum % 12 || 12;
     return `${hourNum}:${minute} ${ampm}`;
-  }
+  };
 
-  // --- FILTER LOGIC ---
-  const displayedTasks = filterDate 
+  // ============================================================================
+  // FILTER LOGIC
+  // ============================================================================
+
+  /**
+   * DISPLAYED TASKS
+   * Filters tasks based on selected date
+   * If filterDate is null, shows all tasks
+   */
+  const displayedTasks = filterDate
     ? tasks.filter((task) => {
         const d = new Date(task.date);
         const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
         const taskDateLocal = `${year}-${month}-${day}`;
         return taskDateLocal === filterDate;
       })
@@ -175,8 +289,17 @@ function MainPage() {
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden pb-8">
       {/* Background SVG */}
       <div className="absolute inset-0 z-0 pt-64 pointer-events-none">
-        <svg viewBox="0 0 412 690" fill="none" preserveAspectRatio="none" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <path d="M-1.16937 43.1118C44.3306 181.112 296.434 -67.5257 432.331 18.6118C568.227 104.749 546.727 606.974 410.831 693.112C274.934 779.249 134.727 779.249 -1.16937 693.112C-137.066 606.974 -46.6694 -94.8882 -1.16937 43.1118Z" fill="#CDB885" />
+        <svg
+          viewBox="0 0 412 690"
+          fill="none"
+          preserveAspectRatio="none"
+          className="w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M-1.16937 43.1118C44.3306 181.112 296.434 -67.5257 432.331 18.6118C568.227 104.749 546.727 606.974 410.831 693.112C274.934 779.249 134.727 779.249 -1.16937 693.112C-137.066 606.974 -46.6694 -94.8882 -1.16937 43.1118Z"
+            fill="#CDB885"
+          />
         </svg>
       </div>
 
@@ -193,7 +316,8 @@ function MainPage() {
           <div>
             <p className="text-2xl font-bold">Today</p>
             <p className="text-base opacity-90">
-              {displayedTasks.length} {displayedTasks.length === 1 ? "task" : "tasks"}
+              {displayedTasks.length}{" "}
+              {displayedTasks.length === 1 ? "task" : "tasks"}
             </p>
           </div>
 
@@ -214,8 +338,8 @@ function MainPage() {
           daysToShow={30}
           onSelectDate={(date) => {
             const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
             setFilterDate(`${year}-${month}-${day}`);
           }}
           tasks={tasks}
@@ -223,13 +347,15 @@ function MainPage() {
 
         <div className="mt-5 px-5 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-primary font-serif">
-            {filterDate ? `Tasks for ${new Date(filterDate).toLocaleDateString()}` : "All My Tasks"}
+            {filterDate
+              ? `Tasks for ${new Date(filterDate).toLocaleDateString()}`
+              : "All My Tasks"}
           </h1>
-          
+
           {filterDate && (
-            <button 
+            <button
               onClick={() => setFilterDate(null)}
-              className="text-sm font-bold text-secondary bg-primary px-3 py-1 rounded-full shadow-md hover:scale-105 transition-transform"
+              className="text-sm font-bold text-secondary bg-primary px-3 py-1 rounded-full shadow-md"
             >
               Show All
             </button>
@@ -246,8 +372,8 @@ function MainPage() {
               <MdOutlineAssignmentLate className="text-8xl mb-4" />
               <p className="text-xl font-serif font-bold">No tasks found</p>
               <p className="text-sm font-serif text-center px-10">
-                {filterDate 
-                  ? "There are no tasks scheduled for this day." 
+                {filterDate
+                  ? "There are no tasks scheduled for this day."
                   : "You're all caught up! Add a new task to get started."}
               </p>
             </div>
@@ -255,16 +381,15 @@ function MainPage() {
             displayedTasks.map((task) => (
               <TaskCard
                 key={task._id}
-                time={formatTime(task.time)} 
+                time={formatTime(task.time)}
                 title={task.title}
                 description={task.description || "No description"}
-                
                 // Pass current status
                 completed={task.isCompleted}
-                
                 // 👇 Call our logic instead of direct update
-                onToggleComplete={() => handleToggleClick(task._id, task.isCompleted)}
-                
+                onToggleComplete={() =>
+                  handleToggleClick(task._id, task.isCompleted)
+                }
                 onEdit={() => initiateEdit(task._id)}
                 onDelete={() => initiateDelete(task._id)}
               />
@@ -280,15 +405,15 @@ function MainPage() {
         title="Delete Task"
         footer={
           <>
-            <button 
+            <button
               onClick={() => setIsDeleteModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition"
+              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 hover:scale-105 active:scale-95 transition-all duration-200"
             >
               Cancel
             </button>
-            <button 
+            <button
               onClick={confirmDelete}
-              className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition shadow-md"
+              className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               Delete
             </button>
@@ -306,15 +431,15 @@ function MainPage() {
         title="Edit Task"
         footer={
           <>
-            <button 
+            <button
               onClick={() => setIsEditModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition"
+              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 hover:scale-105 active:scale-95 transition-all duration-200"
             >
               Cancel
             </button>
-            <button 
+            <button
               onClick={confirmEdit}
-              className="px-6 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 transition shadow-md"
+              className="px-6 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               Edit
             </button>
@@ -331,15 +456,15 @@ function MainPage() {
         title="Complete Task"
         footer={
           <>
-            <button 
+            <button
               onClick={() => setIsCompleteModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition"
+              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 hover:scale-105 active:scale-95 transition-all duration-200"
             >
               Cancel
             </button>
-            <button 
+            <button
               onClick={confirmComplete}
-              className="px-6 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 transition shadow-md"
+              className="px-6 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               Yes, Complete
             </button>
@@ -349,7 +474,6 @@ function MainPage() {
         <p className="text-lg">Mark this task as completed?</p>
         <p className="text-sm opacity-70 mt-2">Good job! Keep it up. 🎉</p>
       </Modal>
-
     </div>
   );
 }

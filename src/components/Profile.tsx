@@ -32,7 +32,7 @@ interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   // 👇 Changed from 'any' to 'Partial<ProfileData>'
-  initialData?: Partial<ProfileData>; 
+  initialData?: Partial<ProfileData>;
   // 👇 Changed from 'any' to 'PasswordData'
   onSave: (data: ProfileData, passwordData?: PasswordData) => Promise<void>;
 }
@@ -57,7 +57,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     username: "",
     mobile: "",
     email: "",
-    gender: "Male",
+    gender: "",
     address: "",
     ...initialData,
   });
@@ -75,7 +75,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       const startData: ProfileData = {
-        username: initialData?.username || "",
+        username: initialData?.username || initialData?.username || "", // Add .name if backend uses 'name'
         mobile: initialData?.mobile || "",
         email: initialData?.email || "",
         gender: initialData?.gender || "Male",
@@ -253,11 +253,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
         {/* ================= HEADER SECTION ================= */}
         <div className="relative mb-16 w-full">
-          <div className="relative w-full h-32 rounded-t-xl bg-gray-200 overflow-hidden border-b-4 border-secondary flex items-center justify-center text-primary/40 font-bold bg-primary/5">
+          <div className="relative w-full h-32 rounded-t-xl bg-primary/5 overflow-hidden border-b-4 border-secondary flex items-center justify-center text-primary/40 font-bold">
             No Cover Photo
           </div>
           <div className="absolute -bottom-12 left-6">
-            <div className="w-24 h-24 rounded-full border-4 border-secondary bg-white overflow-hidden shadow-lg flex items-center justify-center bg-primary text-secondary text-4xl">
+            <div className="w-24 h-24 rounded-full border-4 border-secondary bg-primary overflow-hidden shadow-lg flex items-center justify-center text-secondary text-4xl">
               <FaUser />
             </div>
           </div>
@@ -288,7 +288,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             ) : (
               <div className="flex items-center gap-3 text-primary w-full">
                 <FaUser className="text-xl opacity-70 shrink-0" />
-                <span className="text-xl font-bold font-serif break-words">
+                <span className="text-xl font-bold font-serif break-all">
                   {formData.username || "No Name Set"}
                 </span>
               </div>
@@ -415,9 +415,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 />
               </div>
             ) : (
-              <div className="flex gap-3 text-primary bg-primary/5 p-4 rounded-lg border border-primary/10 min-h-[80px] w-full text-left">
+              <div className="flex gap-3 text-primary bg-primary/5 p-4 rounded-lg border border-primary/10 min-h-20 w-full text-left">
                 <FaMapMarkerAlt className="text-xl opacity-70 mt-1 shrink-0" />
-                <span className="font-serif opacity-90 whitespace-pre-wrap break-words w-full">
+                <span className="font-serif opacity-90 whitespace-pre-wrap break-all w-full">
                   {formData.address || "No Address Set"}
                 </span>
               </div>

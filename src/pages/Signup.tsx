@@ -7,10 +7,10 @@ import { useNavigate } from "react-router-dom";
 // Import Custom Components
 import CheckBox from "@/components/CheckBox";
 import InputField from "@/components/InputField";
+import Modal from "@/components/Modal";
 import PrimaryButton from "@/components/PrimaryButton";
-import { TermsModal, PrivacyModal } from "../utils/LegalModals"; 
-import Modal from "@/components/Modal"; 
 import Logo from "../images/Logo.png";
+import { PrivacyModal, TermsModal } from "../utils/LegalModals";
 
 axios.defaults.withCredentials = true;
 
@@ -26,7 +26,7 @@ function Signup() {
   // --- AGREEMENT STATE ---
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToPrivacy, setAgreedToPrivacy] = useState(false);
-  
+
   // --- MODAL VISIBILITY STATES ---
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -46,7 +46,15 @@ function Signup() {
 
   // Derived state
   const allAgreementsAccepted = agreedToTerms && agreedToPrivacy;
-  const isFormValid = !loading && !emailError && !passwordError && allAgreementsAccepted && name && email && password && confirmPassword;
+  const isFormValid =
+    !loading &&
+    !emailError &&
+    !passwordError &&
+    allAgreementsAccepted &&
+    name &&
+    email &&
+    password &&
+    confirmPassword;
 
   // --- HELPER: SHOW ERROR MODAL ---
   const showError = (title: string, message: string) => {
@@ -63,9 +71,10 @@ function Signup() {
       try {
         const response = await axios.post(
           "http://localhost:5000/api/auth/check-email",
-          { email: email }
+          { email: email },
         );
-        if (response.data.exists) setEmailError("This email is already registered.");
+        if (response.data.exists)
+          setEmailError("This email is already registered.");
         else setEmailError("");
       } catch (error) {
         console.error("Email check failed", error);
@@ -77,13 +86,73 @@ function Signup() {
   // --- 2. PASSWORD VALIDATION LOGIC ---
   const validatePassword = (val: string) => {
     setPassword(val);
+    // Strict Regex: No special chars allowed
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
     if (!passwordRegex.test(val)) {
-      setPasswordError("8-16 chars, 1 Upper, 1 Lower, 1 Number, NO special chars.");
+      setPasswordError(
+        "8-16 chars, 1 Upper, 1 Lower, 1 Number, NO special chars.",
+      );
     } else {
       setPasswordError("");
     }
   };
+
+  // --- 3. PASSWORD STRENGTH CALCULATOR ---
+  const getStrength = (val: string) => {
+    if (!val)
+      return {
+        width: "0%",
+        color: "bg-transparent",
+        label: "",
+        textColor: "",
+      };
+
+    const len = val.length;
+    const hasUpper = /[A-Z]/.test(val);
+    const hasLower = /[a-z]/.test(val);
+    const hasNum = /\d/.test(val);
+    const hasSpecial = /[^A-Za-z0-9]/.test(val); // Check for banned chars
+
+    // Case 1: Contains special char (Invalid based on your rules) -> RED
+    if (hasSpecial) {
+      return {
+        width: "100%",
+        color: "bg-red-500",
+        label: "Invalid",
+        textColor: "text-red-500",
+      };
+    }
+
+    // Case 2: Too short OR missing complexity -> RED
+    if (len < 8 || !hasUpper || !hasLower || !hasNum) {
+      return {
+        width: "33%",
+        color: "bg-red-500",
+        label: "Weak",
+        textColor: "text-red-500",
+      };
+    }
+
+    // Case 3: Good length (8-11) AND correct complexity -> YELLOW
+    if (len < 12) {
+      return {
+        width: "66%",
+        color: "bg-yellow-500",
+        label: "Medium",
+        textColor: "text-yellow-600",
+      };
+    }
+
+    // Case 4: Strong length (12-16) AND correct complexity -> GREEN
+    return {
+      width: "100%",
+      color: "bg-green-500",
+      label: "Strong",
+      textColor: "text-green-600",
+    };
+  };
+
+  const strength = getStrength(password);
 
   // --- HANDLE CHECKBOX CLICK ---
   const handleCheckboxClick = () => {
@@ -99,7 +168,7 @@ function Signup() {
   // --- HANDLE SUCCESS CLOSE ---
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
-    navigate("/LandPage"); 
+    navigate("/LandPage");
   };
 
   // --- SUBMIT LOGIC ---
@@ -107,13 +176,22 @@ function Signup() {
     e.preventDefault();
 
     if (emailError || passwordError) {
-      return showError("Validation Error", "Please fix the highlighted errors in the form.");
+      return showError(
+        "Validation Error",
+        "Please fix the highlighted errors in the form.",
+      );
     }
     if (password !== confirmPassword) {
-      return showError("Password Mismatch", "The passwords you entered do not match.");
+      return showError(
+        "Password Mismatch",
+        "The passwords you entered do not match.",
+      );
     }
     if (!allAgreementsAccepted) {
-      return showError("Agreement Required", "You must read and agree to the Terms & Conditions and Privacy Policy to continue.");
+      return showError(
+        "Agreement Required",
+        "You must read and agree to the Terms & Conditions and Privacy Policy to continue.",
+      );
     }
 
     setLoading(true);
@@ -121,16 +199,19 @@ function Signup() {
     try {
       const response = await axios.post(
         "http://localhost:5000/api/auth/signup",
-        { name, email, password }
+        { name, email, password },
       );
 
       if (response.status === 201 || response.status === 200) {
         localStorage.setItem("user", JSON.stringify(response.data.user));
-        setShowSuccessModal(true); 
+        setShowSuccessModal(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Signup Error:", error);
-      const errorMessage = error.response?.data?.message || "Connection failed. Please check your internet connection.";
+      const errorMessage =
+        (error instanceof Error && error.message) ||
+        (axios.isAxiosError(error) && error.response?.data?.message) ||
+        "Connection failed. Please check your internet connection.";
       showError("Signup Failed", errorMessage);
     } finally {
       setLoading(false);
@@ -148,8 +229,17 @@ function Signup() {
       <div className="relative flex-grow flex flex-col">
         {/* Background SVG */}
         <div className="absolute inset-0 z-0">
-          <svg viewBox="0 0 412 690" fill="none" preserveAspectRatio="none" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <path d="M-1.16937 43.1118C44.3306 181.112 296.434 -67.5257 432.331 18.6118C568.227 104.749 546.727 606.974 410.831 693.112C274.934 779.249 134.727 779.249 -1.16937 693.112C-137.066 606.974 -46.6694 -94.8882 -1.16937 43.1118Z" fill="#CDB885" />
+          <svg
+            viewBox="0 0 412 690"
+            fill="none"
+            preserveAspectRatio="none"
+            className="w-full h-full"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M-1.16937 43.1118C44.3306 181.112 296.434 -67.5257 432.331 18.6118C568.227 104.749 546.727 606.974 410.831 693.112C274.934 779.249 134.727 779.249 -1.16937 693.112C-137.066 606.974 -46.6694 -94.8882 -1.16937 43.1118Z"
+              fill="#CDB885"
+            />
           </svg>
         </div>
 
@@ -159,78 +249,168 @@ function Signup() {
             Create Your Account
           </h1>
 
-          <form onSubmit={handleSubmit} className="w-full max-w-sm flex flex-col items-center">
+          <form
+            onSubmit={handleSubmit}
+            className="w-full max-w-sm flex flex-col items-center"
+          >
             <div className="w-full flex flex-col">
-              <InputField type="text" placeholder="Name" icon={<FaUser />} value={name} onChange={(e) => setName(e.target.value)} />
-              
+              <InputField
+                type="text"
+                placeholder="Name"
+                icon={<FaUser />}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+
               <div className="flex flex-col">
-                <InputField type="email" placeholder="Email" icon={<MdEmail className={emailError ? "text-red-500" : ""} />} value={email} onChange={(e) => setEmail(e.target.value)} error={!!emailError} />
-                {emailError && <div className="flex items-center gap-1 -mt-3 mb-2 text-red-500 text-xs font-bold pl-2"><MdError /><span>{emailError}</span></div>}
+                <InputField
+                  type="email"
+                  placeholder="Email"
+                  icon={
+                    <MdEmail className={emailError ? "text-red-500" : ""} />
+                  }
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  error={!!emailError}
+                />
+                {emailError && (
+                  <div className="flex items-center gap-1 -mt-3 mb-2 text-red-500 text-xs font-bold pl-2">
+                    <MdError />
+                    <span>{emailError}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col">
-                <InputField type="password" placeholder="Password" icon={<FaLock className={passwordError ? "text-red-500" : ""} />} value={password} onChange={(e) => validatePassword(e.target.value)} error={!!passwordError} />
-                {passwordError && <div className="flex items-start gap-1 -mt-3 mb-2 text-red-500 text-xs font-bold pl-2"><MdError className="mt-0.5 min-w-[12px]" /><span>{passwordError}</span></div>}
+                <InputField
+                  type="password"
+                  placeholder="Password"
+                  icon={
+                    <FaLock className={passwordError ? "text-red-500" : ""} />
+                  }
+                  value={password}
+                  onChange={(e) => validatePassword(e.target.value)}
+                  error={!!passwordError}
+                />
+
+                {/* --- STRENGTH INDICATOR WITH TEXT --- */}
+                {password && (
+                  <div className="flex items-center gap-3 mt-1 mb-2">
+                    {/* The Bar */}
+                    <div className="flex-grow h-1 bg-gray-300 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${strength.color} transition-all duration-300 ease-out`}
+                        style={{ width: strength.width }}
+                      ></div>
+                    </div>
+                    {/* The Text Label */}
+                    <span
+                      className={`text-[10px] uppercase font-bold tracking-wider ${strength.textColor}`}
+                    >
+                      {strength.label}
+                    </span>
+                  </div>
+                )}
+
+                {passwordError && (
+                  <div className="flex items-start gap-1 -mt-1 mb-2 text-red-500 text-xs font-bold pl-2">
+                    <MdError className="mt-0.5 min-w-[12px]" />
+                    <span>{passwordError}</span>
+                  </div>
+                )}
               </div>
 
-              <InputField type="password" placeholder="Confirm Password" icon={<FaLock />} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              <InputField
+                type="password"
+                placeholder="Confirm Password"
+                icon={<FaLock />}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
 
             <div className="w-full mt-4">
-              <div onClick={handleCheckboxClick} className="inline-block cursor-pointer">
+              <div
+                onClick={handleCheckboxClick}
+                className="inline-block cursor-pointer"
+              >
                 <CheckBox
                   id="agree"
-                  checked={allAgreementsAccepted} 
-                  onChange={() => {}} 
+                  checked={allAgreementsAccepted}
+                  onChange={() => {}}
                   label={
                     <span className="select-none">
                       I agree to the{" "}
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowTermsModal(true); }} className={`font-bold hover:underline ${agreedToTerms ? 'text-green-700' : 'text-primary'}`}>Terms & Conditions</button>{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowTermsModal(true);
+                        }}
+                        className={`font-bold hover:underline ${
+                          agreedToTerms ? "text-green-700" : "text-primary"
+                        }`}
+                      >
+                        Terms & Conditions
+                      </button>{" "}
                       and{" "}
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setShowPrivacyModal(true); }} className={`font-bold hover:underline ${agreedToPrivacy ? 'text-green-700' : 'text-primary'}`}>Privacy Policy</button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPrivacyModal(true);
+                        }}
+                        className={`font-bold hover:underline ${
+                          agreedToPrivacy ? "text-green-700" : "text-primary"
+                        }`}
+                      >
+                        Privacy Policy
+                      </button>
                     </span>
                   }
                 />
               </div>
             </div>
 
-            {/* 👇 FIXED BUTTON SECTION */}
-            <div className={`w-full mt-6 transition-opacity duration-300 ${!isFormValid ? "opacity-50 cursor-not-allowed" : ""}`}>
-               {/* Instead of wrapping PrimaryButton in another button, 
-                  we pass the props directly to PrimaryButton.
-               */}
-               <PrimaryButton 
-                  content={loading ? "Checking..." : "Sign Up"}
-                  type="submit"
-                  widthClass="w-full"
-                  // If PrimaryButton supports 'disabled' prop, pass it here. 
-                  // If not, we rely on the parent div's pointer-events or add the prop to PrimaryButton component.
-               />
+            <div
+              className={`w-full mt-6 transition-opacity duration-300 ${
+                !isFormValid ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              <PrimaryButton
+                content={loading ? "Checking..." : "Sign Up"}
+                type="submit"
+                widthClass="w-full"
+              />
             </div>
-
           </form>
 
           <p className="mt-10 text-sm">
             Already have an account?
-            <a href="/LandPage" className="text-primary font-bold pl-1 hover:underline">Log In</a>
+            <a
+              href="/LandPage"
+              className="text-primary font-bold pl-1 hover:underline"
+            >
+              Log In
+            </a>
           </p>
         </div>
       </div>
 
       {/* --- LEGAL MODALS --- */}
-      <TermsModal 
-        isOpen={showTermsModal} 
-        onClose={() => setShowTermsModal(false)} 
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
         onAgree={() => {
-            setAgreedToTerms(true);
-            if (!agreedToPrivacy) setShowPrivacyModal(true);
-        }} 
+          setAgreedToTerms(true);
+          if (!agreedToPrivacy) setShowPrivacyModal(true);
+        }}
       />
 
-      <PrivacyModal 
-        isOpen={showPrivacyModal} 
-        onClose={() => setShowPrivacyModal(false)} 
-        onAgree={() => setAgreedToPrivacy(true)} 
+      <PrivacyModal
+        isOpen={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
+        onAgree={() => setAgreedToPrivacy(true)}
       />
 
       {/* --- SUCCESS MODAL --- */}
@@ -240,7 +420,7 @@ function Signup() {
         title="Success!"
         footer={
           <div className="flex justify-center w-full">
-            <button 
+            <button
               onClick={handleSuccessClose}
               className="px-8 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 transition shadow-md w-full"
             >
@@ -250,7 +430,7 @@ function Signup() {
         }
       >
         <p className="text-center text-lg text-primary/80">
-          Account created successfully! <br/> Please log in to continue.
+          Account created successfully! <br /> Please log in to continue.
         </p>
       </Modal>
 
@@ -261,7 +441,7 @@ function Signup() {
         title={infoModal.title}
         footer={
           <div className="flex justify-center w-full">
-            <button 
+            <button
               onClick={() => setInfoModal({ ...infoModal, isOpen: false })}
               className="px-8 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 transition shadow-md"
             >
@@ -274,7 +454,6 @@ function Signup() {
           {infoModal.message}
         </p>
       </Modal>
-
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import InputField from "@/components/InputField";
 import PrimaryButton from "@/components/PrimaryButton";
-import { FaLock } from "react-icons/fa";
+import Modal from "@/components/Modal"; // Ensure you import your Modal component
+import { FaLock, FaCheck, FaExclamationTriangle } from "react-icons/fa";
 import { IoMdArrowRoundBack } from "react-icons/io";
 import { MdEmail } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
@@ -12,24 +13,50 @@ const ForgotPass: React.FC = () => {
   const [email, setEmail] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
+  // --- MODAL STATE ---
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showNavModal, setShowNavModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // --- HANDLERS ---
+
   const handleSendOtp = async () => {
-    if (!email) return alert("Please enter your email");
+    if (!email) {
+      setErrorMessage("Please enter your email address.");
+      setShowErrorModal(true);
+      return;
+    }
 
     setLoading(true);
     try {
-      await axios.post("http://localhost:5000/api/auth/forgot-password", { email });
-      alert("OTP sent to your email!");
-      navigate("/verify", { state: { email } });
+      await axios.post("http://localhost:5000/api/auth/forgot-password", {
+        email,
+      });
+      setShowSuccessModal(true); // Show success modal instead of alert
     } catch (error: unknown) {
-      // Use Axios type guard to safely access response data
       if (axios.isAxiosError(error)) {
-        alert(error.response?.data?.message || "Error sending OTP");
+        setErrorMessage(error.response?.data?.message || "Error sending OTP");
       } else {
-        // Fallback for non-axios errors (e.g., network failure or code crash)
-        alert("An unexpected error occurred");
+        setErrorMessage("An unexpected error occurred");
       }
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessModal(false);
+    navigate("/verify", { state: { email } });
+  };
+
+  const handleBackClick = () => {
+    // If user has typed an email, confirm before leaving
+    if (email.length > 0) {
+      setShowNavModal(true);
+    } else {
+      navigate(-1);
     }
   };
 
@@ -38,12 +65,12 @@ const ForgotPass: React.FC = () => {
       {/* Back Button */}
       <button
         className="absolute top-6 left-6 z-50 text-primary hover:opacity-80 transition-opacity"
-        onClick={() => window.history.back()}
+        onClick={handleBackClick} // Updated to use confirmation handler
       >
         <IoMdArrowRoundBack size={30} />
       </button>
 
-      {/* Background SVG */}
+      {/* Background SVG (Original Layout Preserved) */}
       <div className="absolute top-0 left-0 w-full h-[35vh] md:h-[50vh] z-0">
         <svg
           viewBox="0 0 412 315"
@@ -59,19 +86,20 @@ const ForgotPass: React.FC = () => {
         </svg>
       </div>
 
-      {/* Top Section (Icon) */}
+      {/* Top Section Icon (Original Layout Preserved) */}
       <div className="relative z-10 pt-10 flex flex-col items-center">
         <FaLock className="w-auto h-50 text-primary" />
       </div>
 
-      {/* Content Area */}
+      {/* Content Area (Original Layout Preserved) */}
       <div className="relative grow flex flex-col">
         <div className="w-full max-w-sm mx-auto mt-6">
           <h1 className="text-3xl text-secondary mt-30 mb-8 font-serif uppercase tracking-tight text-center">
             Forgot Password
           </h1>
           <p className="text-secondary text-center max-w-md mx-auto pb-5">
-            Enter your email address and we'll send you a OTP to reset your password.
+            Enter your email address and we'll send you a OTP to reset your
+            password.
           </p>
 
           <div className="mb-4">
@@ -80,7 +108,9 @@ const ForgotPass: React.FC = () => {
               placeholder="Enter your email"
               icon={<MdEmail />}
               value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEmail(e.target.value)
+              }
             />
           </div>
 
@@ -93,6 +123,93 @@ const ForgotPass: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* ================= MODALS ================= */}
+
+      {/* 1. SUCCESS MODAL */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={handleSuccessClose}
+        title="Email Sent"
+        footer={
+          <div className="flex justify-center w-full">
+            <button
+              onClick={handleSuccessClose}
+              className="px-8 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <FaCheck /> Verify Now
+            </button>
+          </div>
+        }
+      >
+        <div className="flex flex-col items-center justify-center text-center p-4">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <FaCheck className="text-3xl text-green-600" />
+          </div>
+          <h3 className="text-xl font-bold text-primary mb-2">
+            OTP Sent Successfully!
+          </h3>
+          <p className="text-primary/70">
+            We have sent a verification code to <strong>{email}</strong>. Please
+            check your inbox.
+          </p>
+        </div>
+      </Modal>
+
+      {/* 2. ERROR MODAL */}
+      <Modal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        footer={
+          <div className="flex justify-center w-full">
+            <button
+              onClick={() => setShowErrorModal(false)}
+              className="px-8 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-md hover:shadow-lg"
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        <div className="flex flex-col items-center justify-center text-center p-4">
+          <FaExclamationTriangle className="text-5xl text-red-500 mb-4" />
+          <h3 className="text-lg font-bold text-primary mb-2">
+            Failed to Send OTP
+          </h3>
+          <p className="text-primary/70">{errorMessage}</p>
+        </div>
+      </Modal>
+
+      {/* 3. NAVIGATION CONFIRMATION MODAL */}
+      <Modal
+        isOpen={showNavModal}
+        onClose={() => setShowNavModal(false)}
+        title="Cancel Reset?"
+        footer={
+          <div className="flex gap-3 w-full justify-center">
+            <button
+              onClick={() => setShowNavModal(false)}
+              className="flex-1 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10"
+            >
+              Stay
+            </button>
+            <button
+              onClick={() => navigate("/LandPage")}
+              className="flex-1 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 shadow-md hover:shadow-lg"
+            >
+              Yes, Leave
+            </button>
+          </div>
+        }
+      >
+        <div className="text-center p-4">
+          <p className="text-lg text-primary">
+            You have entered an email but haven't sent the OTP yet. Are you sure
+            you want to go back?
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 };

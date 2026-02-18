@@ -1,25 +1,41 @@
-import React, { useState } from "react"; // Removed useEffect import
+import axios from "axios";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; 
 
 // Icons
+import { BiUserCircle } from "react-icons/bi";
 import { CgMenuGridO } from "react-icons/cg";
 import {
+  IoCheckmarkCircle,
   IoClose,
   IoHomeOutline,
-  IoTimeOutline,
   IoLogOutOutline,
-  IoCheckmarkCircle,
+  IoTimeOutline,
 } from "react-icons/io5";
-import { BiUserCircle } from "react-icons/bi";
 
 // Components
-import Modal from "../components/Modal";
 import HistoryModal from "../components/HistoryModal";
+import Modal from "../components/Modal";
 import ProfileModal from "../components/Profile";
 
-// --- INTERFACES ---
+// ============================================================================
+// HEADER COMPONENT - Navigation and User Controls
+// ============================================================================
+// This component provides:
+// - Top navigation bar with logo and title
+// - Sidebar menu (mobile-friendly)
+// - User profile management
+// - Logout functionality
+// - History modal
+// - Account settings
 
+// ============================================================================
+// INTERFACES - Type definitions for user data and props
+// ============================================================================
+
+/**
+ * User Object - Stores authenticated user information
+ */
 interface User {
   name: string;
   email: string;
@@ -30,6 +46,10 @@ interface User {
   coverPhoto: string | null;
 }
 
+/**
+ * Profile Update Data - Form data for updating user profile
+ * Subset of User info that can be edited
+ */
 interface ProfileUpdateData {
   username: string;
   email: string;
@@ -38,22 +58,39 @@ interface ProfileUpdateData {
   address: string;
 }
 
+/**
+ * Password Data - Form data for changing password
+ */
 interface PasswordData {
   current: string;
   new: string;
 }
 
+/**
+ * Header Props - Component configuration options
+ */
 interface HeaderProps {
+  /** Logo image URL/path */
   logo: string;
+  /** Title text to display beside logo */
   title?: string;
+  /** Callback when menu button is clicked */
   onMenuClick?: () => void;
+  /** Optional React element to render on right side */
   rightElement?: React.ReactNode;
 }
 
+/**
+ * Sidebar Link Props - Configuration for sidebar navigation items
+ */
 interface SidebarLinkProps {
+  /** Icon component/element */
   icon: React.ReactNode;
+  /** Link label text */
   label: string;
+  /** Callback when link is clicked */
   onClick: () => void;
+  /** Optional Tailwind color class */
   colorClass?: string;
 }
 
@@ -89,7 +126,7 @@ const Header: React.FC<HeaderProps> = ({
   const [user, setUser] = useState<User>(() => {
     // 1. Check local storage immediately during initialization
     const storedUser = localStorage.getItem("user");
-    
+
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -100,7 +137,7 @@ const Header: React.FC<HeaderProps> = ({
         return defaultUser;
       }
     }
-    
+
     // 2. Fallback to default if nothing in storage
     return defaultUser;
   });
@@ -143,7 +180,7 @@ const Header: React.FC<HeaderProps> = ({
   // --- SAVE HANDLER ---
   const handleSaveProfile = async (
     updatedData: ProfileUpdateData,
-    passwordData?: PasswordData
+    passwordData?: PasswordData,
   ) => {
     try {
       const payload = {
@@ -159,7 +196,7 @@ const Header: React.FC<HeaderProps> = ({
       const response = await axios.put(
         "http://localhost:5000/api/users/profile",
         payload,
-        { withCredentials: true }
+        { withCredentials: true },
       );
 
       if (response.status === 200) {
@@ -206,20 +243,20 @@ const Header: React.FC<HeaderProps> = ({
         ) : (
           <button
             onClick={toggleSidebar}
-            className="text-secondary text-4xl hover:opacity-80 transition shrink-0 flex items-center justify-center"
+            className="text-secondary text-4xl hover:opacity-80 shrink-0 flex items-center justify-center"
           >
             <CgMenuGridO />
           </button>
         )}
       </div>
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR - With smooth slide animation */}
       <div
-        className={`fixed inset-0 bg-black/50 z-[100] transition-opacity duration-300 ${isSidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
+        className={`fixed inset-0 bg-black/50 z-[100] transition-all duration-300 ease-out ${isSidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"}`}
         onClick={toggleSidebar}
       />
       <div
-        className={`font-serif fixed top-0 right-0 h-full w-72 bg-secondary shadow-2xl z-[101] transform transition-transform duration-300 ease-in-out p-6 flex flex-col gap-6 ${isSidebarOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`font-serif fixed top-0 right-0 h-full w-72 bg-secondary shadow-2xl z-[101] transform transition-all duration-300 ease-out p-6 flex flex-col gap-6 ${isSidebarOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex justify-between items-start mb-5">
           <div className="flex items-center gap-3">
@@ -289,13 +326,13 @@ const Header: React.FC<HeaderProps> = ({
           <>
             <button
               onClick={() => setIsLogoutModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 transition"
+              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10"
             >
               Cancel
             </button>
             <button
               onClick={confirmLogout}
-              className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition shadow-md"
+              className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-md hover:shadow-lg"
             >
               Yes, Log Out
             </button>

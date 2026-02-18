@@ -32,8 +32,9 @@ const InputField: React.FC<InputFieldProps> = ({
         type={inputType}
         placeholder={placeholder}
         // Logic: Apply red border directly here if error is true
-        className={`w-full bg-secondary rounded-[5px] text-primary text-[20px] h-10 pl-12 pr-20 outline-none font-serif 
-          ${error ? "border-2 border-red-500" : ""} 
+        className={`w-full bg-secondary rounded-[5px] text-primary text-[20px] h-10 pl-12 pr-20 outline-none font-serif transition-all duration-300 ease-out
+          ${error ? "border-2 border-red-500 shadow-red-200 shadow-md" : "border-2 border-transparent"} 
+          focus:border-primary focus:shadow-lg focus:shadow-primary/20
           ${className || ""}`}
         {...rest}
       />
@@ -41,7 +42,7 @@ const InputField: React.FC<InputFieldProps> = ({
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-primary cursor-pointer text-2xl"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-primary cursor-pointer text-2xl hover:opacity-70 active:scale-90 transition-all duration-200"
         >
           {showPassword ? <FaEyeSlash /> : <FaEye />}
         </button>

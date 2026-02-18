@@ -1,71 +1,72 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axiosInstance from "../../../axios/axiosInstance";
-import { handleError } from "../../../axios/errorHandler";
+import axiosInstance from "@/axios/axios-instance";
 
+// Note: handleError not found, using direct error handling instead
 
-// if axiosInstance.baseURL === '/api'
 export const fetchOtherUsers = async () => {
   try {
-    const { data } = await axiosInstance.get("api/users", {
+    const { data } = await axiosInstance.get("/users", {
       headers: { "Cache-Control": "no-cache" },
     });
     return data;
   } catch (err: any) {
     if (err?.response?.status === 304) {
-      const { data } = await axiosInstance.get("api/users", {
+      const { data } = await axiosInstance.get("/users", {
         params: { t: Date.now() },
       });
       return data;
     }
-    // Don't throw error for 401 - it's expected when not authenticated
     if (err?.response?.status === 401) {
       throw err;
     }
-    return handleError(err);
+    console.error("Error fetching users:", err);
+    throw err;
   }
 };
 
 export const fetchDTR = async (id: string) => {
   try {
-    const response = await axiosInstance.get(`api/dtr/all/${id}`);
+    const response = await axiosInstance.get(`/dtr/all/${id}`);
     return response;
   } catch (error: unknown) {
-    return handleError(error);
+    console.error("Error fetching DTR:", error);
+    throw error;
   }
 };
 
 export const fetchOwnDTR = async () => {
   try {
-    const response = await axiosInstance.get("/api/dtr");
+    const response = await axiosInstance.get("/dtr");
     return response;
   } catch (error: unknown) {
-    return handleError(error);
+    console.error("Error fetching own DTR:", error);
+    throw error;
   }
 };
 
 export const fetchSchedule = async () => {
   try {
-    const response = await axiosInstance.get("api/schedule");
+    const response = await axiosInstance.get("/schedule");
     return response;
   } catch (error: unknown) {
-    return handleError(error);
+    console.error("Error fetching schedule:", error);
+    throw error;
   }
 };
 
 export const fetchUserDetails = async () => {
   try {
-    const response = await axiosInstance.get("api/users/profile/me");
+    const response = await axiosInstance.get("/users/profile/me");
     return response;
   } catch (error: unknown) {
-    // Don't throw error for 401 - it's expected when not authenticated
-    if (error && typeof error === 'object' && 'response' in error) {
+    if (error && typeof error === "object" && "response" in error) {
       const axiosError = error as { response?: { status?: number } };
       if (axiosError.response?.status === 401) {
-        // Return a rejected promise but don't log error
         throw error;
       }
     }
-    return handleError(error);
+    console.error("Error fetching user details:", error);
+    throw error;
   }
 };
 
@@ -85,7 +86,7 @@ export const updateUserProfile = async (
     oldPassword?: string;
     newPassword?: string;
     position?: string[];
-  }
+  },
 ) => {
   try {
     const formData = new FormData();
@@ -123,12 +124,11 @@ export const updateUserProfile = async (
     }
     // Upload file using chunk uploader if a file is provided
     if (profileData.profilePictureFile) {
-      const { uploadFileInChunks } = await import("../../../utils/global/chunkUploader");
-      const imageUrl = await uploadFileInChunks(
-        profileData.profilePictureFile,
-        `hrms/admin/employees/profile`
-      );
-      formData.append("image", imageUrl);
+      // TODO: Implement file upload if needed
+      console.warn("File upload not yet implemented");
+      // const { uploadFileInChunks } = await import("@/utils/chunkUploader");
+      // const imageUrl = await uploadFileInChunks(profileData.profilePictureFile, `profile`);
+      // formData.append("image", imageUrl);
     } else if (profileData.profilePictureUrl) {
       formData.append("image", profileData.profilePictureUrl);
     }
@@ -139,18 +139,23 @@ export const updateUserProfile = async (
       });
     }
 
-    const response = await axiosInstance.put(`api/users/profile/${userId}`, formData);
+    const response = await axiosInstance.put(
+      `/users/profile/${userId}`,
+      formData,
+    );
     return response.data;
   } catch (error: unknown) {
-    return handleError(error);
+    console.error("Error updating profile:", error);
+    throw error;
   }
 };
 
 export const switchUserRole = async (role: string) => {
   try {
-    const response = await axiosInstance.put("api/users/switch-role", { role });
+    const response = await axiosInstance.put("/users/switch-role", { role });
     return response.data;
   } catch (error: unknown) {
-    return handleError(error);
+    console.error("Error switching user role:", error);
+    throw error;
   }
 };
