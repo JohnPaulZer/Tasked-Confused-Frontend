@@ -1,27 +1,32 @@
-import ActCard from "@/components/ActCard";
-import BackButton from "@/components/BackButton";
-import Header from "@/components/Header";
-import PrimaryButton from "@/components/PrimaryButton";
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate, useBlocker } from "react-router-dom";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
+import ActCard from "@/components/task/ActCard";
+import AddTaskCalendar from "@/components/task/AddTaskCalendar";
+import AddTaskForm from "@/components/task/AddTaskForm";
+import AddTaskHeader from "@/components/task/AddTaskHeader";
+import AddTaskModal from "@/components/task/AddTaskModal";
 import axios from "axios";
-import Modal from "@/components/Modal";
+import { useEffect, useState } from "react";
+import { useBlocker, useLocation, useNavigate } from "react-router-dom";
 
 axios.defaults.withCredentials = true;
 
 // Icons
 import { FaBook, FaDumbbell, FaRegLightbulb } from "react-icons/fa";
 import { IoFastFoodSharp } from "react-icons/io5";
-import {
-  MdChevronLeft,
-  MdChevronRight,
-  MdSportsVolleyball,
-} from "react-icons/md";
+import { MdSportsVolleyball } from "react-icons/md";
 import Logo from "../images/Logo.png";
 
+// Create and add task form page
 function AddTask() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate initial page load
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const categoryTitle = location.state?.category || "Study";
 
@@ -70,7 +75,7 @@ function AddTask() {
     }
   }, [blocker.state]);
 
-  // Handle Cancel Logic for the blocker
+  // Cancel leave and stay on page if there are unsaved changes
   const handleCancelLeave = () => {
     setModal({ ...modal, isOpen: false });
     if (blocker.state === "blocked") {
@@ -78,7 +83,7 @@ function AddTask() {
     }
   };
 
-  // --- Helper to open Alert Modal ---
+  // Show confirmation alert modal
   const showAlert = (title: string, message: string, onOk?: () => void) => {
     setModal({
       isOpen: true,
@@ -89,6 +94,7 @@ function AddTask() {
     });
   };
 
+  // Return appropriate icon based on category
   const getIcon = (title: string) => {
     switch (title) {
       case "Idea":
@@ -106,7 +112,7 @@ function AddTask() {
     }
   };
 
-  // --- 4. SUBMIT FUNCTION ---
+  // Submit form and create task via API
   const handleSubmit = async () => {
     if (!taskName)
       return showAlert("Missing Input", "Please enter a task name.");
@@ -148,21 +154,25 @@ function AddTask() {
     }
   };
 
-  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayOfMonth = new Date(year, month, 1).getDay();
+  // Move to previous month in calendar
   const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  // Move to next month in calendar
   const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+  // Set selected date when clicking calendar day
   const handleDateClick = (day: number) =>
     setSelectedDate(new Date(year, month, day));
+  // Check if day is selected
   const isSelected = (day: number) =>
     selectedDate.getDate() === day && selectedDate.getMonth() === month;
+  // Check if day is today
   const isToday = (day: number) => {
     const today = new Date();
     return day === today.getDate() && month === today.getMonth();
   };
+
+  if (isLoading) return <SkeletonLoader type="addtask" />;
 
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden pb-8 relative">
@@ -183,67 +193,15 @@ function AddTask() {
       </div>
 
       <div className="relative z-10 flex flex-col w-full h-full">
-        <div>
-          <Header logo={Logo} title="Create New Task" />
-          <div className="">
-            {/* Custom back logic not needed because useBlocker intercepts it automatically */}
-            <BackButton />
-          </div>
-        </div>
+        <AddTaskHeader logo={Logo} />
 
-        {/* ... Calendar UI & Category Card (Same as before) ... */}
-
-        <div className="px-5 mt-6">
-          <div className="bg-secondary/50 rounded-3xl p-5 shadow-lg border border-primary font-serif">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={prevMonth}
-                className="p-1 hover:bg-secondary rounded-full text-primary"
-              >
-                <MdChevronLeft size={24} />
-              </button>
-              <h2 className="text-lg font-bold text-primary">
-                {currentDate.toLocaleDateString("default", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h2>
-              <button
-                onClick={nextMonth}
-                className="p-1 hover:bg-secondary rounded-full text-primary"
-              >
-                <MdChevronRight size={24} />
-              </button>
-            </div>
-            <div className="grid grid-cols-7 mb-2 text-center">
-              {daysOfWeek.map((day) => (
-                <div
-                  key={day}
-                  className="text-xs font-semibold text-primary uppercase"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-y-2 gap-x-1">
-              {Array.from({ length: firstDayOfMonth }).map((_, i) => (
-                <div key={`empty-${i}`} />
-              ))}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                return (
-                  <button
-                    key={day}
-                    onClick={() => handleDateClick(day)}
-                    className={`h-9 w-9 mx-auto flex items-center justify-center rounded-full text-sm font-medium ${isSelected(day) ? "bg-primary text-secondary" : isToday(day) ? "border border-primary text-primary" : "text-primary"}`}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <AddTaskCalendar
+          currentDate={currentDate}
+          selectedDate={selectedDate}
+          onPrevMonth={prevMonth}
+          onNextMonth={nextMonth}
+          onDateClick={handleDateClick}
+        />
 
         <div>
           <ActCard
@@ -254,94 +212,32 @@ function AddTask() {
           />
         </div>
 
-        <div className="px-5 mt-6 space-y-4">
-          <div>
-            <label className="text-primary font-semibold text-sm block mb-2">
-              Task Name
-            </label>
-            <input
-              type="text"
-              value={taskName}
-              onChange={(e) => setTaskName(e.target.value)}
-              placeholder="Enter task name"
-              className="w-full px-4 py-2 rounded-lg border-2 border-primary bg-secondary text-primary focus:outline-none font-serif"
-            />
-          </div>
-
-          <div>
-            <label className="text-primary font-semibold text-sm block mb-2">
-              Time
-            </label>
-            <input
-              type="time"
-              value={taskTime}
-              onChange={(e) => setTaskTime(e.target.value)}
-              className="w-full px-4 py-2 rounded-lg border-2 border-primary bg-secondary text-primary focus:outline-none font-serif"
-            />
-          </div>
-
-          <div>
-            <label className="text-primary font-semibold text-sm block mb-2">
-              Description
-            </label>
-            <textarea
-              value={taskDescription}
-              onChange={(e) => setTaskDescription(e.target.value)}
-              placeholder="Enter task description"
-              rows={4}
-              className="w-full px-4 py-2 rounded-lg border-2 border-primary bg-secondary text-primary focus:outline-none font-serif resize-none"
-            />
-          </div>
-
-          <div onClick={handleSubmit}>
-            <PrimaryButton content={loading ? "Saving..." : "Add Task"} />
-          </div>
-        </div>
+        <AddTaskForm
+          taskName={taskName}
+          taskTime={taskTime}
+          taskDescription={taskDescription}
+          loading={loading}
+          onTaskNameChange={setTaskName}
+          onTaskTimeChange={setTaskTime}
+          onTaskDescriptionChange={setTaskDescription}
+          onSubmit={handleSubmit}
+        />
       </div>
 
-      {/* --- 5. RENDER MODAL --- */}
-      <Modal
+      <AddTaskModal
         isOpen={modal.isOpen}
-        onClose={handleCancelLeave} // Clicking background closes modal and cancels leave
         title={modal.title}
-        footer={
-          modal.type === "confirm" ? (
-            // --- CONFIRMATION FOOTER (Yes/No) ---
-            <>
-              <button
-                onClick={handleCancelLeave}
-                className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10"
-              >
-                No, Stay
-              </button>
-              <button
-                onClick={() => {
-                  setModal({ ...modal, isOpen: false });
-                  if (modal.onConfirm) modal.onConfirm(); // Proceed with navigation
-                }}
-                className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-md hover:shadow-lg"
-              >
-                Yes, Leave
-              </button>
-            </>
-          ) : (
-            // --- ALERT FOOTER (Okay only) ---
-            <div className="flex justify-center w-full">
-              <button
-                onClick={() => {
-                  setModal({ ...modal, isOpen: false });
-                  if (modal.onConfirm) modal.onConfirm();
-                }}
-                className="px-8 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 shadow-md hover:shadow-lg"
-              >
-                Okay
-              </button>
-            </div>
-          )
+        message={modal.message}
+        type={modal.type as "alert" | "confirm"}
+        onClose={handleCancelLeave}
+        onConfirm={
+          modal.type === "confirm"
+            ? () => {
+                if (modal.onConfirm) modal.onConfirm();
+              }
+            : modal.onConfirm || undefined
         }
-      >
-        <p className="text-lg">{modal.message}</p>
-      </Modal>
+      />
     </div>
   );
 }

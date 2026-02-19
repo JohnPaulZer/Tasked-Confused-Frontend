@@ -1,13 +1,14 @@
+import InputField from "@/components/common/InputField";
+import Modal from "@/components/common/Modal"; // Ensure you import your Modal component
+import PrimaryButton from "@/components/common/PrimaryButton";
+import axios from "axios";
 import React, { useState } from "react";
-import InputField from "@/components/InputField";
-import PrimaryButton from "@/components/PrimaryButton";
-import Modal from "@/components/Modal"; // Ensure you import your Modal component
-import { FaLock, FaCheck, FaExclamationTriangle } from "react-icons/fa";
+import { FaCheck, FaExclamationTriangle, FaLock } from "react-icons/fa";
 import { IoMdArrowRoundBack } from "react-icons/io";
 import { MdEmail } from "react-icons/md";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
+// Forgot password - request OTP via email
 const ForgotPass: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
@@ -21,6 +22,7 @@ const ForgotPass: React.FC = () => {
 
   // --- HANDLERS ---
 
+  // Send OTP to email via backend
   const handleSendOtp = async () => {
     if (!email) {
       setErrorMessage("Please enter your email address.");
@@ -46,11 +48,13 @@ const ForgotPass: React.FC = () => {
     }
   };
 
+  // Close success modal and go to OTP verification
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
     navigate("/verify", { state: { email } });
   };
 
+  // Go back with unsaved email confirmation
   const handleBackClick = () => {
     // If user has typed an email, confirm before leaving
     if (email.length > 0) {

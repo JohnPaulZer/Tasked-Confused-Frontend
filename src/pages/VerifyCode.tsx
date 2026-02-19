@@ -1,11 +1,12 @@
-import React, { useState, useRef } from "react";
-import { FaLock, FaCheck, FaExclamationTriangle } from "react-icons/fa";
-import { IoMdArrowRoundBack } from "react-icons/io";
-import PrimaryButton from "@/components/PrimaryButton";
-import Modal from "@/components/Modal";
-import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import React, { useRef, useState } from "react";
+import { FaCheck, FaExclamationTriangle, FaLock } from "react-icons/fa";
+import { IoMdArrowRoundBack } from "react-icons/io";
+import { useLocation, useNavigate } from "react-router-dom";
+import Modal from "../components/common/Modal";
+import PrimaryButton from "../components/common/PrimaryButton";
 
+// OTP verification page for password recovery
 const VerifyCode: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,14 +19,18 @@ const VerifyCode: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [showNavModal, setShowNavModal] = useState(false);
-  
+
   // New state for Resend Modal
   const [showResendModal, setShowResendModal] = useState(false);
-  
+
   const [errorMessage, setErrorMessage] = useState("");
   const [isResending, setIsResending] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  // Handle OTP digit input and auto-focus next field
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    index: number,
+  ) => {
     const value = e.target.value;
     if (isNaN(Number(value))) return;
 
@@ -38,22 +43,30 @@ const VerifyCode: React.FC = () => {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+  // Handle backspace to move to previous field
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    index: number,
+  ) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
+  // Submit OTP code for verification
   const handleVerify = async () => {
     const otpCode = otp.join("");
     if (otpCode.length !== 6) {
-        setErrorMessage("Please enter the complete 6-digit code.");
-        setShowErrorModal(true);
-        return;
+      setErrorMessage("Please enter the complete 6-digit code.");
+      setShowErrorModal(true);
+      return;
     }
 
     try {
-      await axios.post("http://localhost:5000/api/auth/verify-otp", { email, otp: otpCode });
+      await axios.post("http://localhost:5000/api/auth/verify-otp", {
+        email,
+        otp: otpCode,
+      });
       setShowSuccessModal(true);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
@@ -65,11 +78,13 @@ const VerifyCode: React.FC = () => {
     }
   };
 
+  // Close success modal and redirect to password reset page
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
     navigate("/reset", { state: { email } });
   };
 
+  // Resend OTP email to user
   const handleResendOtp = async () => {
     if (!email) {
       setErrorMessage("Email not found. Please go back and try again.");
@@ -80,16 +95,20 @@ const VerifyCode: React.FC = () => {
     setIsResending(true);
 
     try {
-      await axios.post("http://localhost:5000/api/auth/forgot-password", { email });
-      
+      await axios.post("http://localhost:5000/api/auth/forgot-password", {
+        email,
+      });
+
       // Trigger the Success Modal instead of inline text
       setShowResendModal(true);
-      
+
       setOtp(new Array(6).fill("")); // Clear the input fields
       inputRefs.current[0]?.focus(); // Focus on first input
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        setErrorMessage(error.response?.data?.message || "Failed to resend OTP");
+        setErrorMessage(
+          error.response?.data?.message || "Failed to resend OTP",
+        );
       } else {
         setErrorMessage("An unexpected error occurred");
       }
@@ -101,10 +120,10 @@ const VerifyCode: React.FC = () => {
 
   const handleBackClick = () => {
     // If user entered any digit, confirm before leaving
-    if (otp.some(digit => digit !== "")) {
-        setShowNavModal(true);
+    if (otp.some((digit) => digit !== "")) {
+      setShowNavModal(true);
     } else {
-        navigate(-1);
+      navigate(-1);
     }
   };
 
@@ -155,7 +174,9 @@ const VerifyCode: React.FC = () => {
                 key={index}
                 type="text"
                 maxLength={1}
-                ref={(el) => { inputRefs.current[index] = el; }}
+                ref={(el) => {
+                  inputRefs.current[index] = el;
+                }}
                 value={digit}
                 onChange={(e) => handleChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
@@ -166,19 +187,21 @@ const VerifyCode: React.FC = () => {
 
           <div className="px-4 space-y-4">
             <PrimaryButton
-                content="Verify Code"
-                bgColorClass="bg-secondary"
-                colorClass="text-primary"
-                hoverBgColorClass="hover:bg-primary hover:text-secondary"
-                onClick={handleVerify}
+              content="Verify Code"
+              bgColorClass="bg-secondary"
+              colorClass="text-primary"
+              hoverBgColorClass="hover:bg-primary hover:text-secondary"
+              onClick={handleVerify}
             />
             <PrimaryButton
-                content={isResending ? "Resending..." : "Resend OTP"}
-                bgColorClass="bg-secondary"
-                colorClass="text-primary"
-                hoverBgColorClass={isResending ? "" : "hover:bg-primary hover:text-secondary"}
-                onClick={() => !isResending && handleResendOtp()}
-                className={isResending ? "opacity-60" : ""}
+              content={isResending ? "Resending..." : "Resend OTP"}
+              bgColorClass="bg-secondary"
+              colorClass="text-primary"
+              hoverBgColorClass={
+                isResending ? "" : "hover:bg-primary hover:text-secondary"
+              }
+              onClick={() => !isResending && handleResendOtp()}
+              className={isResending ? "opacity-60" : ""}
             />
           </div>
         </div>
@@ -204,7 +227,7 @@ const VerifyCode: React.FC = () => {
       >
         <div className="flex flex-col items-center justify-center text-center p-4">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-             <FaCheck className="text-3xl text-green-600 animate-bounce" />
+            <FaCheck className="text-3xl text-green-600 animate-bounce" />
           </div>
           <h3 className="text-xl font-bold text-primary mb-2">Code Verified</h3>
           <p className="text-primary/70">
@@ -231,11 +254,11 @@ const VerifyCode: React.FC = () => {
       >
         <div className="flex flex-col items-center justify-center text-center p-4">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-             <FaCheck className="text-3xl text-green-600" />
+            <FaCheck className="text-3xl text-green-600" />
           </div>
           <h3 className="text-xl font-bold text-primary mb-2">Sent!</h3>
           <p className="text-primary/70">
-            OTP resent successfully! <br/> Check your email.
+            OTP resent successfully! <br /> Check your email.
           </p>
         </div>
       </Modal>
@@ -258,7 +281,9 @@ const VerifyCode: React.FC = () => {
       >
         <div className="flex flex-col items-center justify-center text-center p-4">
           <FaExclamationTriangle className="text-5xl text-red-500 mb-4" />
-          <h3 className="text-lg font-bold text-primary mb-2">Verification Failed</h3>
+          <h3 className="text-lg font-bold text-primary mb-2">
+            Verification Failed
+          </h3>
           <p className="text-primary/70">{errorMessage}</p>
         </div>
       </Modal>
@@ -286,12 +311,12 @@ const VerifyCode: React.FC = () => {
         }
       >
         <div className="text-center p-4">
-            <p className="text-lg text-primary">
-                You have started entering the code. Are you sure you want to stop verifying?
-            </p>
+          <p className="text-lg text-primary">
+            You have started entering the code. Are you sure you want to stop
+            verifying?
+          </p>
         </div>
       </Modal>
-
     </div>
   );
 };

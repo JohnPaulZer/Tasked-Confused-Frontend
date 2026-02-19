@@ -1,6 +1,6 @@
 import React from "react";
 import { MdDeleteOutline, MdOutlineEdit } from "react-icons/md";
-import CheckBox from "./CheckBox";
+import CheckBox from "../common/CheckBox";
 
 /**
  * TASK CARD COMPONENT PROPS

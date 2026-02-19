@@ -1,19 +1,19 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
-import { FaLock, FaUser } from "react-icons/fa";
-import { MdEmail, MdError } from "react-icons/md";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // Import Custom Components
-import CheckBox from "@/components/CheckBox";
-import InputField from "@/components/InputField";
-import Modal from "@/components/Modal";
-import PrimaryButton from "@/components/PrimaryButton";
-import Logo from "../images/Logo.png";
-import { PrivacyModal, TermsModal } from "../utils/LegalModals";
+import SignupForm from "@/components/auth/SignupForm";
+import SignupHeader from "@/components/auth/SignupHeader";
+import SignupModals from "@/components/modals/SignupModals";
+
+// Import Hooks
+import { usePasswordStrength } from "@/hooks/usePasswordStrength";
+import { useSignupValidation } from "@/hooks/useSignupValidation";
 
 axios.defaults.withCredentials = true;
 
+// User registration page with form validation and agreement checks
 function Signup() {
   const navigate = useNavigate();
 
@@ -31,130 +31,40 @@ function Signup() {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
-  // --- GENERIC ERROR/INFO MODAL STATE ---
-  const [infoModal, setInfoModal] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-  });
+  // --- ERROR/INFO MODAL STATE ---
+  const [errorTitle, setErrorTitle] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // Validation State
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  // --- VALIDATION & LOADING ---
   const [loading, setLoading] = useState(false);
+  const { emailError, passwordError, validateEmail, handlePasswordChange } =
+    useSignupValidation();
 
-  // Derived state
+  // --- PASSWORD STRENGTH ---
+  const strength = usePasswordStrength(password);
+
+  // --- DERIVED STATE ---
   const allAgreementsAccepted = agreedToTerms && agreedToPrivacy;
   const isFormValid =
     !loading &&
     !emailError &&
     !passwordError &&
     allAgreementsAccepted &&
-    name &&
-    email &&
-    password &&
-    confirmPassword;
+    !!name &&
+    !!email &&
+    !!password &&
+    !!confirmPassword;
 
-  // --- HELPER: SHOW ERROR MODAL ---
+  // Show error modal with title and message
   const showError = (title: string, message: string) => {
-    setInfoModal({ isOpen: true, title, message });
+    setErrorTitle(title);
+    setErrorMessage(message);
+    setShowErrorModal(true);
   };
 
-  // --- 1. EMAIL VALIDATION LOGIC ---
-  useEffect(() => {
-    if (!email) {
-      setEmailError("");
-      return;
-    }
-    const delayDebounceFn = setTimeout(async () => {
-      try {
-        const response = await axios.post(
-          "http://localhost:5000/api/auth/check-email",
-          { email: email },
-        );
-        if (response.data.exists)
-          setEmailError("This email is already registered.");
-        else setEmailError("");
-      } catch (error) {
-        console.error("Email check failed", error);
-      }
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [email]);
-
-  // --- 2. PASSWORD VALIDATION LOGIC ---
-  const validatePassword = (val: string) => {
-    setPassword(val);
-    // Strict Regex: No special chars allowed
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
-    if (!passwordRegex.test(val)) {
-      setPasswordError(
-        "8-16 chars, 1 Upper, 1 Lower, 1 Number, NO special chars.",
-      );
-    } else {
-      setPasswordError("");
-    }
-  };
-
-  // --- 3. PASSWORD STRENGTH CALCULATOR ---
-  const getStrength = (val: string) => {
-    if (!val)
-      return {
-        width: "0%",
-        color: "bg-transparent",
-        label: "",
-        textColor: "",
-      };
-
-    const len = val.length;
-    const hasUpper = /[A-Z]/.test(val);
-    const hasLower = /[a-z]/.test(val);
-    const hasNum = /\d/.test(val);
-    const hasSpecial = /[^A-Za-z0-9]/.test(val); // Check for banned chars
-
-    // Case 1: Contains special char (Invalid based on your rules) -> RED
-    if (hasSpecial) {
-      return {
-        width: "100%",
-        color: "bg-red-500",
-        label: "Invalid",
-        textColor: "text-red-500",
-      };
-    }
-
-    // Case 2: Too short OR missing complexity -> RED
-    if (len < 8 || !hasUpper || !hasLower || !hasNum) {
-      return {
-        width: "33%",
-        color: "bg-red-500",
-        label: "Weak",
-        textColor: "text-red-500",
-      };
-    }
-
-    // Case 3: Good length (8-11) AND correct complexity -> YELLOW
-    if (len < 12) {
-      return {
-        width: "66%",
-        color: "bg-yellow-500",
-        label: "Medium",
-        textColor: "text-yellow-600",
-      };
-    }
-
-    // Case 4: Strong length (12-16) AND correct complexity -> GREEN
-    return {
-      width: "100%",
-      color: "bg-green-500",
-      label: "Strong",
-      textColor: "text-green-600",
-    };
-  };
-
-  const strength = getStrength(password);
-
-  // --- HANDLE CHECKBOX CLICK ---
+  // Toggle terms and privacy agreement checkboxes
   const handleCheckboxClick = () => {
     if (allAgreementsAccepted) {
       setAgreedToTerms(false);
@@ -165,13 +75,13 @@ function Signup() {
     }
   };
 
-  // --- HANDLE SUCCESS CLOSE ---
+  // Close success modal and redirect to login page
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
-    navigate("/LandPage");
+    navigate("/LandPage", { state: { from: "signup", email } });
   };
 
-  // --- SUBMIT LOGIC ---
+  // Submit signup form with validation and API call
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -208,11 +118,11 @@ function Signup() {
       }
     } catch (error) {
       console.error("Signup Error:", error);
-      const errorMessage =
+      const errorMsg =
         (error instanceof Error && error.message) ||
         (axios.isAxiosError(error) && error.response?.data?.message) ||
         "Connection failed. Please check your internet connection.";
-      showError("Signup Failed", errorMessage);
+      showError("Signup Failed", errorMsg);
     } finally {
       setLoading(false);
     }
@@ -220,10 +130,8 @@ function Signup() {
 
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden">
-      {/* Top Section */}
-      <div className="relative z-10 pt-10 flex flex-col items-center">
-        <img src={Logo} alt="Logo" className="w-auto h-64 object-contain" />
-      </div>
+      {/* Top Section with Logo */}
+      <SignupHeader />
 
       {/* The Curve Section */}
       <div className="relative flex-grow flex flex-col">
@@ -249,211 +157,54 @@ function Signup() {
             Create Your Account
           </h1>
 
-          <form
+          <SignupForm
+            name={name}
+            email={email}
+            password={password}
+            confirmPassword={confirmPassword}
+            emailError={emailError}
+            passwordError={passwordError}
+            agreedToTerms={agreedToTerms}
+            agreedToPrivacy={agreedToPrivacy}
+            isFormValid={isFormValid}
+            loading={loading}
+            strength={strength}
+            onNameChange={setName}
+            onEmailChange={(val) => {
+              setEmail(val);
+              validateEmail(val);
+            }}
+            onPasswordChange={(val) => {
+              setPassword(val);
+              handlePasswordChange(val);
+            }}
+            onConfirmPasswordChange={setConfirmPassword}
+            onCheckboxClick={handleCheckboxClick}
+            onTermsClick={() => setShowTermsModal(true)}
+            onPrivacyClick={() => setShowPrivacyModal(true)}
             onSubmit={handleSubmit}
-            className="w-full max-w-sm flex flex-col items-center"
-          >
-            <div className="w-full flex flex-col">
-              <InputField
-                type="text"
-                placeholder="Name"
-                icon={<FaUser />}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-
-              <div className="flex flex-col">
-                <InputField
-                  type="email"
-                  placeholder="Email"
-                  icon={
-                    <MdEmail className={emailError ? "text-red-500" : ""} />
-                  }
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  error={!!emailError}
-                />
-                {emailError && (
-                  <div className="flex items-center gap-1 -mt-3 mb-2 text-red-500 text-xs font-bold pl-2">
-                    <MdError />
-                    <span>{emailError}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-col">
-                <InputField
-                  type="password"
-                  placeholder="Password"
-                  icon={
-                    <FaLock className={passwordError ? "text-red-500" : ""} />
-                  }
-                  value={password}
-                  onChange={(e) => validatePassword(e.target.value)}
-                  error={!!passwordError}
-                />
-
-                {/* --- STRENGTH INDICATOR WITH TEXT --- */}
-                {password && (
-                  <div className="flex items-center gap-3 mt-1 mb-2">
-                    {/* The Bar */}
-                    <div className="flex-grow h-1 bg-gray-300 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${strength.color} transition-all duration-300 ease-out`}
-                        style={{ width: strength.width }}
-                      ></div>
-                    </div>
-                    {/* The Text Label */}
-                    <span
-                      className={`text-[10px] uppercase font-bold tracking-wider ${strength.textColor}`}
-                    >
-                      {strength.label}
-                    </span>
-                  </div>
-                )}
-
-                {passwordError && (
-                  <div className="flex items-start gap-1 -mt-1 mb-2 text-red-500 text-xs font-bold pl-2">
-                    <MdError className="mt-0.5 min-w-[12px]" />
-                    <span>{passwordError}</span>
-                  </div>
-                )}
-              </div>
-
-              <InputField
-                type="password"
-                placeholder="Confirm Password"
-                icon={<FaLock />}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-
-            <div className="w-full mt-4">
-              <div
-                onClick={handleCheckboxClick}
-                className="inline-block cursor-pointer"
-              >
-                <CheckBox
-                  id="agree"
-                  checked={allAgreementsAccepted}
-                  onChange={() => {}}
-                  label={
-                    <span className="select-none">
-                      I agree to the{" "}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowTermsModal(true);
-                        }}
-                        className={`font-bold hover:underline ${
-                          agreedToTerms ? "text-green-700" : "text-primary"
-                        }`}
-                      >
-                        Terms & Conditions
-                      </button>{" "}
-                      and{" "}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowPrivacyModal(true);
-                        }}
-                        className={`font-bold hover:underline ${
-                          agreedToPrivacy ? "text-green-700" : "text-primary"
-                        }`}
-                      >
-                        Privacy Policy
-                      </button>
-                    </span>
-                  }
-                />
-              </div>
-            </div>
-
-            <div
-              className={`w-full mt-6 transition-opacity duration-300 ${
-                !isFormValid ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-            >
-              <PrimaryButton
-                content={loading ? "Checking..." : "Sign Up"}
-                type="submit"
-                widthClass="w-full"
-              />
-            </div>
-          </form>
-
-          <p className="mt-10 text-sm">
-            Already have an account?
-            <a
-              href="/LandPage"
-              className="text-primary font-bold pl-1 hover:underline"
-            >
-              Log In
-            </a>
-          </p>
+          />
         </div>
       </div>
 
-      {/* --- LEGAL MODALS --- */}
-      <TermsModal
-        isOpen={showTermsModal}
-        onClose={() => setShowTermsModal(false)}
-        onAgree={() => {
+      <SignupModals
+        showTermsModal={showTermsModal}
+        showPrivacyModal={showPrivacyModal}
+        showSuccessModal={showSuccessModal}
+        showErrorModal={showErrorModal}
+        errorTitle={errorTitle}
+        errorMessage={errorMessage}
+        onCloseTerms={() => setShowTermsModal(false)}
+        onClosePrivacy={() => setShowPrivacyModal(false)}
+        onCloseSuccess={handleSuccessClose}
+        onCloseError={() => setShowErrorModal(false)}
+        onAgreeTerms={() => {
           setAgreedToTerms(true);
           if (!agreedToPrivacy) setShowPrivacyModal(true);
         }}
+        onAgreePrivacy={() => setAgreedToPrivacy(true)}
+        onSuccessAction={handleSuccessClose}
       />
-
-      <PrivacyModal
-        isOpen={showPrivacyModal}
-        onClose={() => setShowPrivacyModal(false)}
-        onAgree={() => setAgreedToPrivacy(true)}
-      />
-
-      {/* --- SUCCESS MODAL --- */}
-      <Modal
-        isOpen={showSuccessModal}
-        onClose={handleSuccessClose}
-        title="Success!"
-        footer={
-          <div className="flex justify-center w-full">
-            <button
-              onClick={handleSuccessClose}
-              className="px-8 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 transition shadow-md w-full"
-            >
-              Go to Login
-            </button>
-          </div>
-        }
-      >
-        <p className="text-center text-lg text-primary/80">
-          Account created successfully! <br /> Please log in to continue.
-        </p>
-      </Modal>
-
-      {/* --- GENERIC INFO/ERROR MODAL --- */}
-      <Modal
-        isOpen={infoModal.isOpen}
-        onClose={() => setInfoModal({ ...infoModal, isOpen: false })}
-        title={infoModal.title}
-        footer={
-          <div className="flex justify-center w-full">
-            <button
-              onClick={() => setInfoModal({ ...infoModal, isOpen: false })}
-              className="px-8 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 transition shadow-md"
-            >
-              Okay
-            </button>
-          </div>
-        }
-      >
-        <p className="text-center text-lg text-primary/80">
-          {infoModal.message}
-        </p>
-      </Modal>
     </div>
   );
 }

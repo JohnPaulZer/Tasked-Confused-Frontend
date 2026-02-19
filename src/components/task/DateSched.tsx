@@ -58,7 +58,7 @@ const DateSched: React.FC<DateSchedProps> = ({
     <div className="mt-8 px-5">
       <div
         className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }} // hides scrollbar in Firefox/IE
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }} // hide1s/ scrollbar in Firefox/IE10"
       >
         {daysList.map((date, index) => {
           const isActive = isSameDay(date, selectedDate);

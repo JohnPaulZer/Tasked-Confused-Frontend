@@ -1,4 +1,5 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import PageTransition from "./components/common/PageTransition";
 import ProtectedLayout from "./layouts/ProtectedLayout";
 import AddTask from "./pages/AddTask";
 import CreateTask from "./pages/CreateTask";
@@ -11,32 +12,11 @@ import NotFound from "./pages/NotFound";
 import ResetPass from "./pages/ResetPass";
 import Signup from "./pages/Signup";
 import Verify from "./pages/VerifyCode";
-import PageTransition from "./components/PageTransition";
 
-/**
- * APP COMPONENT - Root React Router Configuration
- *
- * Sets up all routes for the To-Do List application
- * Routes are divided into:
- * 1. Public Routes - Accessible without authentication
- * 2. Protected Routes - Require JWT token + user session
- * 3. Not Found - Catch-all for invalid routes
- *
- * Authentication Flow:
- * - Unauthenticated users start at LandPage (login)
- * - After login, redirect to MainPage (dashboard)
- * - Protected routes use ProtectedLayout middleware
- * - Invalid URLs show NotFound page
- */
+// Root router with public and protected routes (see README.md for details)
 function App() {
   const router = createBrowserRouter([
-    // ==============================
-    // 🌍 PUBLIC ROUTES (No Login Required)
-    // ==============================
-
-    /**
-     * Root path - Defaults to login page
-     */
+    // Public Routes - Login, Signup, Password Recovery
     {
       path: "/",
       element: (
@@ -46,11 +26,6 @@ function App() {
       ),
     },
 
-    /**
-     * Login page - User email/password authentication
-     * Features: Remember me, forgot password, signup link
-     * Auto-redirects if already logged in
-     */
     {
       path: "/LandPage",
       element: (
@@ -60,11 +35,6 @@ function App() {
       ),
     },
 
-    /**
-     * Signup page - New user registration
-     * Creates account with name, email, password
-     * Redirects to MainPage on success
-     */
     {
       path: "/signup",
       element: (
@@ -75,9 +45,8 @@ function App() {
     },
 
     /**
-     * Forgot Password page
-     * Initiate password reset by entering email
-     * Backend sends OTP to email
+     * Forgot password page
+     * Password recovery with email verification
      */
     {
       path: "/forgot",

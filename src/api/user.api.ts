@@ -3,6 +3,7 @@ import axiosInstance from "@/axios/axios-instance";
 
 // Note: handleError not found, using direct error handling instead
 
+// Fetch all users from server with cache control
 export const fetchOtherUsers = async () => {
   try {
     const { data } = await axiosInstance.get("/users", {
@@ -24,6 +25,7 @@ export const fetchOtherUsers = async () => {
   }
 };
 
+// Fetch daily time records for specified user ID
 export const fetchDTR = async (id: string) => {
   try {
     const response = await axiosInstance.get(`/dtr/all/${id}`);
@@ -34,6 +36,7 @@ export const fetchDTR = async (id: string) => {
   }
 };
 
+// Fetch current user's daily time records
 export const fetchOwnDTR = async () => {
   try {
     const response = await axiosInstance.get("/dtr");
@@ -44,6 +47,7 @@ export const fetchOwnDTR = async () => {
   }
 };
 
+// Fetch schedule data from server
 export const fetchSchedule = async () => {
   try {
     const response = await axiosInstance.get("/schedule");
@@ -54,6 +58,7 @@ export const fetchSchedule = async () => {
   }
 };
 
+// Fetch current user's profile details
 export const fetchUserDetails = async () => {
   try {
     const response = await axiosInstance.get("/users/profile/me");
@@ -70,6 +75,7 @@ export const fetchUserDetails = async () => {
   }
 };
 
+// Update user profile with form data - supports profile pic, personal info, and password change
 export const updateUserProfile = async (
   userId: string,
   profileData: {
@@ -150,6 +156,7 @@ export const updateUserProfile = async (
   }
 };
 
+// Switch user's active role to specified role
 export const switchUserRole = async (role: string) => {
   try {
     const response = await axiosInstance.put("/users/switch-role", { role });

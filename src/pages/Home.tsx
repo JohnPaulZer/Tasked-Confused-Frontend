@@ -1,9 +1,21 @@
-import PrimaryButton from "@/components/PrimaryButton";
+import PrimaryButton from "@/components/common/PrimaryButton";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../images/Logo.png";
 
+// Landing page - welcome screen and app entry point
 function Home() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate initial page load
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) return <SkeletonLoader type="home" />;
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden">
       <div className="absolute inset-0 z-0 pt-64">

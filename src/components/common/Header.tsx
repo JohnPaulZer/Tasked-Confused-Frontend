@@ -14,28 +14,10 @@ import {
 } from "react-icons/io5";
 
 // Components
-import HistoryModal from "../components/HistoryModal";
-import Modal from "../components/Modal";
-import ProfileModal from "../components/Profile";
+import HistoryModal from "../modals/HistoryModal";
+import ProfileModal from "../profile/Profile";
+import Modal from "./Modal";
 
-// ============================================================================
-// HEADER COMPONENT - Navigation and User Controls
-// ============================================================================
-// This component provides:
-// - Top navigation bar with logo and title
-// - Sidebar menu (mobile-friendly)
-// - User profile management
-// - Logout functionality
-// - History modal
-// - Account settings
-
-// ============================================================================
-// INTERFACES - Type definitions for user data and props
-// ============================================================================
-
-/**
- * User Object - Stores authenticated user information
- */
 interface User {
   name: string;
   email: string;
@@ -46,10 +28,6 @@ interface User {
   coverPhoto: string | null;
 }
 
-/**
- * Profile Update Data - Form data for updating user profile
- * Subset of User info that can be edited
- */
 interface ProfileUpdateData {
   username: string;
   email: string;
@@ -58,39 +36,22 @@ interface ProfileUpdateData {
   address: string;
 }
 
-/**
- * Password Data - Form data for changing password
- */
 interface PasswordData {
   current: string;
   new: string;
 }
 
-/**
- * Header Props - Component configuration options
- */
 interface HeaderProps {
-  /** Logo image URL/path */
   logo: string;
-  /** Title text to display beside logo */
   title?: string;
-  /** Callback when menu button is clicked */
   onMenuClick?: () => void;
-  /** Optional React element to render on right side */
   rightElement?: React.ReactNode;
 }
 
-/**
- * Sidebar Link Props - Configuration for sidebar navigation items
- */
 interface SidebarLinkProps {
-  /** Icon component/element */
   icon: React.ReactNode;
-  /** Link label text */
   label: string;
-  /** Callback when link is clicked */
   onClick: () => void;
-  /** Optional Tailwind color class */
   colorClass?: string;
 }
 
@@ -107,6 +68,7 @@ const Header: React.FC<HeaderProps> = ({
 
   // --- MODAL STATES ---
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLogoutLoading, setIsLogoutLoading] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -155,6 +117,7 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const confirmLogout = async () => {
+    setIsLogoutLoading(true);
     try {
       await axios.post("http://localhost:5000/api/auth/logout");
       localStorage.removeItem("user");
@@ -164,6 +127,8 @@ const Header: React.FC<HeaderProps> = ({
       console.error("Logout failed", error);
       localStorage.removeItem("user");
       navigate("/LandPage");
+    } finally {
+      setIsLogoutLoading(false);
     }
   };
 
@@ -326,13 +291,15 @@ const Header: React.FC<HeaderProps> = ({
           <>
             <button
               onClick={() => setIsLogoutModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10"
+              disabled={isLogoutLoading}
+              className={`px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold ${isLogoutLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-primary/10"}`}
             >
               Cancel
             </button>
             <button
               onClick={confirmLogout}
-              className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-md hover:shadow-lg"
+              disabled={isLogoutLoading}
+              className={`px-6 py-2 rounded-xl text-white font-bold shadow-md ${isLogoutLoading ? "bg-red-400 cursor-not-allowed opacity-75" : "bg-red-500 hover:bg-red-600 hover:shadow-lg"}`}
             >
               Yes, Log Out
             </button>
@@ -341,6 +308,35 @@ const Header: React.FC<HeaderProps> = ({
       >
         <p className="text-lg">Are you sure you want to log out?</p>
       </Modal>
+
+      {/* --- LOGOUT LOADING MODAL --- */}
+      {isLogoutLoading && (
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 flex flex-col items-center justify-center gap-4 shadow-2xl">
+            <svg
+              className="w-16 h-16 animate-spin text-primary"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <p className="text-lg font-semibold text-primary">Logging out...</p>
+          </div>
+        </div>
+      )}
 
       {/* --- 2. HISTORY MODAL --- */}
       <HistoryModal

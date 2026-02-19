@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import { FaLock, FaCheck, FaExclamationTriangle } from "react-icons/fa";
-import { MdError } from "react-icons/md"; // Added for error icon
-import { IoMdArrowRoundBack } from "react-icons/io";
-import PrimaryButton from "@/components/PrimaryButton";
-import InputField from "@/components/InputField";
-import Modal from "@/components/Modal";
-import { useNavigate, useLocation } from "react-router-dom";
+import InputField from "@/components/common/InputField";
+import Modal from "@/components/common/Modal";
+import PrimaryButton from "@/components/common/PrimaryButton";
 import axios from "axios";
+import React, { useState } from "react";
+import { FaCheck, FaExclamationTriangle, FaLock } from "react-icons/fa";
+import { IoMdArrowRoundBack } from "react-icons/io";
+import { MdError } from "react-icons/md"; // Added for error icon
+import { useLocation, useNavigate } from "react-router-dom";
 
+// Password reset page after OTP verification
 const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,22 +24,22 @@ const ResetPassword: React.FC = () => {
   const [showNavModal, setShowNavModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // --- 1. PASSWORD VALIDATION LOGIC ---
+  // Validate password format and strength
   const validatePassword = (val: string) => {
     setPassword(val);
     // Strict Regex: 8-16 chars, 1 Upper, 1 Lower, 1 Number, NO special chars allowed
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
-    
+
     if (!passwordRegex.test(val)) {
       setPasswordError(
-        "8-16 chars, 1 Upper, 1 Lower, 1 Number, NO special chars."
+        "8-16 chars, 1 Upper, 1 Lower, 1 Number, NO special chars.",
       );
     } else {
       setPasswordError("");
     }
   };
 
-  // --- 2. PASSWORD STRENGTH CALCULATOR ---
+  // Calculate password strength level
   const getStrength = (val: string) => {
     if (!val)
       return {
@@ -95,22 +96,23 @@ const ResetPassword: React.FC = () => {
 
   const strength = getStrength(password);
 
+  // Submit new password to backend
   const handleReset = async () => {
     // Check for validation errors before submitting
     if (passwordError) {
-        setErrorMessage("Please fix the password errors.");
-        setShowErrorModal(true);
-        return;
+      setErrorMessage("Please fix the password errors.");
+      setShowErrorModal(true);
+      return;
     }
     if (password !== confirmPassword) {
-        setErrorMessage("Passwords do not match.");
-        setShowErrorModal(true);
-        return;
+      setErrorMessage("Passwords do not match.");
+      setShowErrorModal(true);
+      return;
     }
     if (!password) {
-        setErrorMessage("Please enter a new password.");
-        setShowErrorModal(true);
-        return;
+      setErrorMessage("Please enter a new password.");
+      setShowErrorModal(true);
+      return;
     }
 
     try {
@@ -121,7 +123,9 @@ const ResetPassword: React.FC = () => {
       setShowSuccessModal(true);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        setErrorMessage(error.response?.data?.message || "Error resetting password");
+        setErrorMessage(
+          error.response?.data?.message || "Error resetting password",
+        );
       } else {
         setErrorMessage("An unexpected error occurred");
       }
@@ -129,17 +133,19 @@ const ResetPassword: React.FC = () => {
     }
   };
 
+  // Close success modal and redirect to login
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
     navigate("/LandPage"); // Redirects to Login/LandPage
   };
 
+  // Go back to previous page or login
   const handleBackClick = () => {
     // If user typed anything, confirm before leaving
     if (password.length > 0) {
-        setShowNavModal(true);
+      setShowNavModal(true);
     } else {
-        navigate(-1);
+      navigate(-1);
     }
   };
 
@@ -178,47 +184,51 @@ const ResetPassword: React.FC = () => {
             Reset Password
           </h1>
           <p className="text-secondary text-center max-w-md mx-auto pb-5">
-             Create a new password for your account.
+            Create a new password for your account.
           </p>
 
           <div className="mb-4 flex flex-col gap-2">
             {/* 1. New Password Field */}
             <div>
-                <InputField
-                  type="password"
-                  placeholder="New Password"
-                  icon={<FaLock className={passwordError ? "text-red-500" : ""} />}
-                  value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => validatePassword(e.target.value)}
-                  error={!!passwordError}
-                />
+              <InputField
+                type="password"
+                placeholder="New Password"
+                icon={
+                  <FaLock className={passwordError ? "text-red-500" : ""} />
+                }
+                value={password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  validatePassword(e.target.value)
+                }
+                error={!!passwordError}
+              />
 
-                {/* --- STRENGTH INDICATOR --- */}
-                {password && (
-                  <div className="flex items-center gap-3 mt-1 mb-2">
-                    {/* The Bar */}
-                    <div className="flex-grow h-1 bg-gray-300 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${strength.color} transition-all duration-300 ease-out`}
-                        style={{ width: strength.width }}
-                      ></div>
-                    </div>
-                    {/* The Text Label */}
-                    <span
-                      className={`text-[10px] uppercase font-bold tracking-wider ${strength.textColor}`}
-                    >
-                      {strength.label}
-                    </span>
+              {/* --- STRENGTH INDICATOR --- */}
+              {password && (
+                <div className="flex items-center gap-3 mt-1 mb-2">
+                  {/* The Bar */}
+                  <div className="flex-grow h-1 bg-gray-300 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${strength.color} transition-all duration-300 ease-out`}
+                      style={{ width: strength.width }}
+                    ></div>
                   </div>
-                )}
+                  {/* The Text Label */}
+                  <span
+                    className={`text-[10px] uppercase font-bold tracking-wider ${strength.textColor}`}
+                  >
+                    {strength.label}
+                  </span>
+                </div>
+              )}
 
-                {/* Validation Error Message */}
-                {passwordError && (
-                  <div className="flex items-start gap-1 -mt-1 mb-2 text-red-500 text-xs font-bold pl-2">
-                    <MdError className="mt-0.5 min-w-[12px]" />
-                    <span>{passwordError}</span>
-                  </div>
-                )}
+              {/* Validation Error Message */}
+              {passwordError && (
+                <div className="flex items-start gap-1 -mt-1 mb-2 text-red-500 text-xs font-bold pl-2">
+                  <MdError className="mt-0.5 min-w-[12px]" />
+                  <span>{passwordError}</span>
+                </div>
+              )}
             </div>
 
             {/* 2. Confirm Password Field */}
@@ -227,18 +237,22 @@ const ResetPassword: React.FC = () => {
               placeholder="Confirm Password"
               icon={<FaLock />}
               value={confirmPassword}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setConfirmPassword(e.target.value)
+              }
             />
           </div>
 
-          <div className={`transition-opacity duration-300 ${passwordError ? "opacity-50 pointer-events-none" : ""}`}>
-             <PrimaryButton
-                content="Reset Password"
-                bgColorClass="bg-secondary"
-                colorClass="text-primary"
-                hoverBgColorClass="hover:bg-primary hover:text-secondary"
-                onClick={handleReset}
-             />
+          <div
+            className={`transition-opacity duration-300 ${passwordError ? "opacity-50 pointer-events-none" : ""}`}
+          >
+            <PrimaryButton
+              content="Reset Password"
+              bgColorClass="bg-secondary"
+              colorClass="text-primary"
+              hoverBgColorClass="hover:bg-primary hover:text-secondary"
+              onClick={handleReset}
+            />
           </div>
         </div>
       </div>
@@ -263,9 +277,11 @@ const ResetPassword: React.FC = () => {
       >
         <div className="flex flex-col items-center justify-center text-center p-4">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-             <FaCheck className="text-3xl text-green-600 animate-bounce" />
+            <FaCheck className="text-3xl text-green-600 animate-bounce" />
           </div>
-          <h3 className="text-xl font-bold text-primary mb-2">Password Reset Successful</h3>
+          <h3 className="text-xl font-bold text-primary mb-2">
+            Password Reset Successful
+          </h3>
           <p className="text-primary/70">
             You can now log in with your new password.
           </p>
@@ -318,12 +334,12 @@ const ResetPassword: React.FC = () => {
         }
       >
         <div className="text-center p-4">
-            <p className="text-lg text-primary">
-                You have started resetting your password. Are you sure you want to cancel?
-            </p>
+          <p className="text-lg text-primary">
+            You have started resetting your password. Are you sure you want to
+            cancel?
+          </p>
         </div>
       </Modal>
-
     </div>
   );
 };

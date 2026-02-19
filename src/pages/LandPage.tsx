@@ -1,6 +1,6 @@
-import CheckBox from "@/components/CheckBox";
-import InputField from "@/components/InputField";
-import PrimaryButton from "@/components/PrimaryButton";
+import CheckBox from "@/components/common/CheckBox";
+import InputField from "@/components/common/InputField";
+import PrimaryButton from "@/components/common/PrimaryButton";
 import axios, { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { FaLock } from "react-icons/fa";
@@ -8,7 +8,7 @@ import { FaSquareGithub } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
 import { ImFacebook2 } from "react-icons/im";
 import { MdCheckCircle, MdEmail, MdError } from "react-icons/md";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Logo from "../images/Logo.png";
 
 axios.defaults.withCredentials = true;
@@ -32,8 +32,10 @@ axios.defaults.withCredentials = true;
  * 5. On success: Store user data and redirect
  * 6. On error: Display error notification
  */
+// Login page for user authentication
 function LandPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ============================================================================
   // STATE MANAGEMENT
@@ -41,8 +43,12 @@ function LandPage() {
 
   /**
    * Email state - loads from localStorage if remember-me was enabled
+   * OR from signup if user just completed registration
    */
   const [email, setEmail] = useState(() => {
+    const stateEmail = (location.state as { email?: string; from?: string })
+      ?.email;
+    if (stateEmail) return stateEmail;
     return localStorage.getItem("rememberedEmail") || "";
   });
 
@@ -79,8 +85,12 @@ function LandPage() {
    * AUTH CHECK EFFECT
    * Runs on component mount to verify if user is already authenticated
    * If user is logged in, automatically redirects to MainPage
+   * UNLESS user just came from signup, in which case show the login page
    */
   useEffect(() => {
+    // Don't auto-redirect if user just signed up
+    const isFromSignup = location.state?.from === "signup";
+    if (isFromSignup) return;
     // Security: Remove any accidentally stored passwords
     if (localStorage.getItem("rememberedPassword")) {
       localStorage.removeItem("rememberedPassword");
@@ -114,7 +124,7 @@ function LandPage() {
     };
 
     checkAuth();
-  }, [navigate]);
+  }, [navigate, location]);
 
   // ============================================================================
   // FORM HANDLERS

@@ -9,9 +9,9 @@ import {
   FaTimes,
   FaUser,
 } from "react-icons/fa";
-import { MdEmail } from "react-icons/md";
-import InputField from "./InputField";
-import Modal from "./Modal";
+import { MdEmail, MdError } from "react-icons/md";
+import InputField from "../common/InputField";
+import Modal from "../common/Modal";
 
 interface ProfileData {
   username: string;
@@ -71,6 +71,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     confirm: "",
   });
 
+  // Validation State for Password
+  const [passwordError, setPasswordError] = useState("");
+
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -89,6 +92,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       setPasswords({ current: "", new: "", confirm: "" });
       setShowPasswordSection(false);
       setIsSaving(false);
+      setPasswordError(""); // Reset error on open
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -100,6 +104,64 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     const passwordChanged = passwords.new.length > 0;
     return dataChanged || passwordChanged;
   };
+
+  // --- PASSWORD VALIDATION & STRENGTH ---
+  const validatePassword = (val: string) => {
+    setPasswords((prev) => ({ ...prev, new: val }));
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+
+    if (!passwordRegex.test(val)) {
+      setPasswordError(
+        "8-16 chars, 1 Upper, 1 Lower, 1 Number, NO special chars.",
+      );
+    } else {
+      setPasswordError("");
+    }
+  };
+
+  const getStrength = (val: string) => {
+    if (!val)
+      return { width: "0%", color: "bg-transparent", label: "", textColor: "" };
+
+    const len = val.length;
+    const hasUpper = /[A-Z]/.test(val);
+    const hasLower = /[a-z]/.test(val);
+    const hasNum = /\d/.test(val);
+    const hasSpecial = /[^A-Za-z0-9]/.test(val);
+
+    if (hasSpecial) {
+      return {
+        width: "100%",
+        color: "bg-red-500",
+        label: "Invalid",
+        textColor: "text-red-500",
+      };
+    }
+    if (len < 8 || !hasUpper || !hasLower || !hasNum) {
+      return {
+        width: "33%",
+        color: "bg-red-500",
+        label: "Weak",
+        textColor: "text-red-500",
+      };
+    }
+    if (len < 12) {
+      return {
+        width: "66%",
+        color: "bg-yellow-500",
+        label: "Medium",
+        textColor: "text-yellow-600",
+      };
+    }
+    return {
+      width: "100%",
+      color: "bg-green-500",
+      label: "Strong",
+      textColor: "text-green-600",
+    };
+  };
+
+  const strength = getStrength(passwords.new);
 
   // --- HANDLERS ---
 
@@ -141,6 +203,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     } else if (pendingAction === "CANCEL") {
       setFormData(originalData);
       setPasswords({ current: "", new: "", confirm: "" });
+      setPasswordError(""); // Clear password error
       setIsEditing(false);
     }
     setShowConfirm(false);
@@ -149,16 +212,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const handleSave = async () => {
     // 1. Validate Password Fields
     if (showPasswordSection) {
+      if (passwordError) {
+        alert("Please fix the password errors before saving.");
+        return;
+      }
       if (!passwords.current || !passwords.new || !passwords.confirm) {
         alert("Please fill in all password fields.");
         return;
       }
       if (passwords.new !== passwords.confirm) {
         alert("New passwords do not match!");
-        return;
-      }
-      if (passwords.new.length < 6) {
-        alert("New password must be at least 6 characters long.");
         return;
       }
     }
@@ -172,6 +235,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       // 3. If successful (no error thrown), close edit mode
       setIsEditing(false);
       setPasswords({ current: "", new: "", confirm: "" });
+      setPasswordError("");
       setShowPasswordSection(false);
     } catch (error) {
       console.error("Failed to save profile", error);
@@ -197,8 +261,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving}
-              className={`px-6 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 transition shadow-md flex items-center gap-2 ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={isSaving || !!passwordError}
+              className={`px-6 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 transition shadow-md flex items-center gap-2 ${isSaving || !!passwordError ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {isSaving ? (
                 "Verifying..."
@@ -437,7 +501,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                   : "Change Password"}
               </button>
               {showPasswordSection && (
-                <div className="space-y-3 bg-primary/5 p-4 rounded-xl border-2 border-primary/10 w-full">
+                <div className="space-y-4 bg-primary/5 p-4 rounded-xl border-2 border-primary/10 w-full">
+                  {/* Current Password */}
                   <div className="bg-secondary rounded-lg border border-primary/20 p-1">
                     <InputField
                       type="password"
@@ -449,17 +514,53 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                       icon={<FaLock />}
                     />
                   </div>
-                  <div className="bg-secondary rounded-lg border border-primary/20 p-1">
-                    <InputField
-                      type="password"
-                      placeholder="New Password"
-                      value={passwords.new}
-                      onChange={(e) =>
-                        setPasswords({ ...passwords, new: e.target.value })
-                      }
-                      icon={<FaLock />}
-                    />
+
+                  {/* New Password & Indicator */}
+                  <div>
+                    <div className="bg-secondary rounded-lg border border-primary/20 p-1">
+                      <InputField
+                        type="password"
+                        placeholder="New Password"
+                        value={passwords.new}
+                        onChange={(e) => validatePassword(e.target.value)}
+                        icon={
+                          <FaLock
+                            className={passwordError ? "text-red-500" : ""}
+                          />
+                        }
+                        error={!!passwordError}
+                      />
+                    </div>
+
+                    {/* --- STRENGTH INDICATOR WITH TEXT --- */}
+                    {passwords.new && (
+                      <div className="flex items-center gap-3 mt-2 px-1 mb-1">
+                        {/* The Bar */}
+                        <div className="flex-grow h-1 bg-gray-300 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${strength.color} transition-all duration-300 ease-out`}
+                            style={{ width: strength.width }}
+                          ></div>
+                        </div>
+                        {/* The Text Label */}
+                        <span
+                          className={`text-[10px] uppercase font-bold tracking-wider ${strength.textColor}`}
+                        >
+                          {strength.label}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Error Message */}
+                    {passwordError && (
+                      <div className="flex items-start gap-1 mt-1 text-red-500 text-xs font-bold pl-2">
+                        <MdError className="mt-0.5 min-w-[12px]" />
+                        <span>{passwordError}</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Confirm Password */}
                   <div className="bg-secondary rounded-lg border border-primary/20 p-1">
                     <InputField
                       type="password"

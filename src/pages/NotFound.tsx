@@ -1,9 +1,19 @@
-import React from "react";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// 404 Not Found error page
 const NotFound: React.FC = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Simulate initial page load
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Navigate back or redirect to login
   const handleGoBack = () => {
     // Check if there is a history entry to go back to.
     // React Router manages history state with an 'idx' (index) counter.
@@ -13,6 +23,8 @@ const NotFound: React.FC = () => {
       navigate("/LandPage", { replace: true }); // Redirect to LandPage (Home) if no history
     }
   };
+
+  if (isLoading) return <SkeletonLoader type="notfound" />;
 
   return (
     <main className="w-full flex min-h-screen items-center justify-center bg-secondary px-6 py-24 sm:py-32 lg:px-8">

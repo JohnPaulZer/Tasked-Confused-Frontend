@@ -2,15 +2,14 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Icons
-import { MdOutlineAssignmentLate } from "react-icons/md";
-
 // Components
-import DateSched from "@/components/DateSched";
-import Header from "@/components/Header";
-import Modal from "@/components/Modal";
-import PrimaryButton from "@/components/PrimaryButton";
-import TaskCard from "@/components/TaskCard";
+import Header from "@/components/common/Header";
+import SkeletonLoader from "@/components/common/SkeletonLoader";
+import MainPageModals from "@/components/modals/MainPageModals";
+import DateSched from "@/components/task/DateSched";
+import MainPageTaskHeader from "@/components/task/MainPageTaskHeader";
+import MainPageTaskList from "@/components/task/MainPageTaskList";
+import MainPageTopSection from "@/components/task/MainPageTopSection";
 import Logo from "../images/Logo.png";
 
 /**
@@ -43,6 +42,7 @@ interface Task {
  * - Optimistic UI updates for better UX
  * - Task count display
  */
+// Main dashboard page for viewing and managing tasks
 function MainPage() {
   const navigate = useNavigate();
 
@@ -247,25 +247,6 @@ function MainPage() {
   };
 
   // ============================================================================
-  // UTILITY FUNCTIONS
-  // ============================================================================
-
-  /**
-   * FORMAT TIME
-   * Converts 24-hour time format (HH:MM) to 12-hour format (H:MM AM/PM)
-   * @param timeStr - Time string in HH:MM format
-   * @returns Formatted time string
-   */
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return "";
-    const [hour, minute] = timeStr.split(":");
-    let hourNum = parseInt(hour);
-    const ampm = hourNum >= 12 ? "PM" : "AM";
-    hourNum = hourNum % 12 || 12;
-    return `${hourNum}:${minute} ${ampm}`;
-  };
-
-  // ============================================================================
   // FILTER LOGIC
   // ============================================================================
 
@@ -284,7 +265,7 @@ function MainPage() {
         return taskDateLocal === filterDate;
       })
     : tasks;
-
+  if (loading) return <SkeletonLoader type="page" />;
   return (
     <div className="w-full min-h-screen bg-primary flex flex-col overflow-x-hidden pb-8">
       {/* Background SVG */}
@@ -306,32 +287,10 @@ function MainPage() {
       <Header logo={Logo} title={currentDate} />
 
       <div className="relative z-10 flex flex-col grow">
-        <h1 className="text-3xl text-secondary font-serif font-bold text-left px-5">
-          <span className="text-5xl">Hello! </span>
-          <br />
-          Good day, JOHN PAUL👋
-        </h1>
-
-        <div className="flex justify-between items-end mt-12 font-serif px-5 text-secondary">
-          <div>
-            <p className="text-2xl font-bold">Today</p>
-            <p className="text-base opacity-90">
-              {displayedTasks.length}{" "}
-              {displayedTasks.length === 1 ? "task" : "tasks"}
-            </p>
-          </div>
-
-          <div className="flex items-end relative">
-            <PrimaryButton
-              content="Add Task"
-              bgColorClass="bg-primary"
-              colorClass="text-secondary"
-              widthClass="w-30"
-              className="text-xl whitespace-nowrap"
-              onClick={() => navigate("/CreateTask")}
-            />
-          </div>
-        </div>
+        <MainPageTopSection
+          taskCount={displayedTasks.length}
+          onAddTaskClick={() => navigate("/CreateTask")}
+        />
 
         <DateSched
           initialDate={new Date()}
@@ -345,135 +304,38 @@ function MainPage() {
           tasks={tasks}
         />
 
-        <div className="mt-5 px-5 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-primary font-serif">
-            {filterDate
-              ? `Tasks for ${new Date(filterDate).toLocaleDateString()}`
-              : "All My Tasks"}
-          </h1>
+        <MainPageTaskHeader
+          filterDate={filterDate}
+          onClearFilter={() => setFilterDate(null)}
+        />
 
-          {filterDate && (
-            <button
-              onClick={() => setFilterDate(null)}
-              className="text-sm font-bold text-secondary bg-primary px-3 py-1 rounded-full shadow-md"
-            >
-              Show All
-            </button>
-          )}
-        </div>
-
-        <div className="px-5 pb-10 flex flex-col gap-2 min-h-50">
-          {loading ? (
-            <p className="text-secondary text-center mt-10 animate-pulse">
-              Loading tasks...
-            </p>
-          ) : displayedTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center mt-10 text-primary">
-              <MdOutlineAssignmentLate className="text-8xl mb-4" />
-              <p className="text-xl font-serif font-bold">No tasks found</p>
-              <p className="text-sm font-serif text-center px-10">
-                {filterDate
-                  ? "There are no tasks scheduled for this day."
-                  : "You're all caught up! Add a new task to get started."}
-              </p>
-            </div>
-          ) : (
-            displayedTasks.map((task) => (
-              <TaskCard
-                key={task._id}
-                time={formatTime(task.time)}
-                title={task.title}
-                description={task.description || "No description"}
-                // Pass current status
-                completed={task.isCompleted}
-                // 👇 Call our logic instead of direct update
-                onToggleComplete={() =>
-                  handleToggleClick(task._id, task.isCompleted)
-                }
-                onEdit={() => initiateEdit(task._id)}
-                onDelete={() => initiateDelete(task._id)}
-              />
-            ))
-          )}
-        </div>
+        <MainPageTaskList
+          tasks={displayedTasks}
+          loading={loading}
+          filterDate={filterDate}
+          onToggleComplete={(taskId) => {
+            const task = tasks.find((t) => t._id === taskId);
+            if (task) {
+              handleToggleClick(taskId, task.isCompleted);
+            }
+          }}
+          onEdit={initiateEdit}
+          onDelete={initiateDelete}
+        />
       </div>
 
-      {/* --- DELETE MODAL --- */}
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        title="Delete Task"
-        footer={
-          <>
-            <button
-              onClick={() => setIsDeleteModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 hover:scale-105 active:scale-95 transition-all duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              className="px-6 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              Delete
-            </button>
-          </>
-        }
-      >
-        <p className="text-lg">Are you sure you want to delete this task?</p>
-        <p className="text-sm opacity-70 mt-2">This action cannot be undone.</p>
-      </Modal>
-
-      {/* --- EDIT MODAL --- */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Edit Task"
-        footer={
-          <>
-            <button
-              onClick={() => setIsEditModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 hover:scale-105 active:scale-95 transition-all duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmEdit}
-              className="px-6 py-2 rounded-xl bg-primary text-secondary font-bold hover:opacity-90 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              Edit
-            </button>
-          </>
-        }
-      >
-        <p className="text-lg">Do you want to edit this task?</p>
-      </Modal>
-
-      {/* --- 👇 NEW: COMPLETE TASK MODAL --- */}
-      <Modal
-        isOpen={isCompleteModalOpen}
-        onClose={() => setIsCompleteModalOpen(false)}
-        title="Complete Task"
-        footer={
-          <>
-            <button
-              onClick={() => setIsCompleteModalOpen(false)}
-              className="px-6 py-2 rounded-xl border-2 border-primary text-primary font-bold hover:bg-primary/10 hover:scale-105 active:scale-95 transition-all duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmComplete}
-              className="px-6 py-2 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              Yes, Complete
-            </button>
-          </>
-        }
-      >
-        <p className="text-lg">Mark this task as completed?</p>
-        <p className="text-sm opacity-70 mt-2">Good job! Keep it up. 🎉</p>
-      </Modal>
+      {/* MODALS */}
+      <MainPageModals
+        isDeleteModalOpen={isDeleteModalOpen}
+        onDeleteClose={() => setIsDeleteModalOpen(false)}
+        onDeleteConfirm={confirmDelete}
+        isEditModalOpen={isEditModalOpen}
+        onEditClose={() => setIsEditModalOpen(false)}
+        onEditConfirm={confirmEdit}
+        isCompleteModalOpen={isCompleteModalOpen}
+        onCompleteClose={() => setIsCompleteModalOpen(false)}
+        onCompleteConfirm={confirmComplete}
+      />
     </div>
   );
 }
